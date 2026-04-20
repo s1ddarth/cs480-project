@@ -1,16 +1,16 @@
 -- 3.1 Managers
 CREATE TABLE Managers (
-	Name VARCHAR,
-	SSN CHAR(11),
-	Email VARCHAR,
+	Name VARCHAR(100) NOT NULL,
+	SSN CHAR(11) NOT NULL,
+	Email VARCHAR(100) NOT NULL,
 	PRIMARY KEY (SSN)
 );
 
---3.2 Client
-CREATE TABLE Client (   --strong entity
-    Name VARCHAR(50),
-    Email VARCHAR(100),
-    PRIMARY KEY (Email)
+-- 3.2 Client
+CREATE TABLE Client (
+	Name VARCHAR(100) NOT NULL,
+	Email VARCHAR(100) NOT NULL,
+	PRIMARY KEY (Email)
 );
 
 -- 3.3 Booking
