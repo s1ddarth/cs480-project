@@ -35,14 +35,14 @@ CREATE TABLE Hotel (
 
 -- 3.5 Room
 CREATE TABLE Room (
-    RoomNumber INT,
-    HotelID INT,
-    AccessMode VARCHAR(10),
-    NumWindows INT DEFAULT 0,
-    LastRenovatedYear INT,
-    PRIMARY KEY  (RoomNumber, HotelID),
-    FOREIGN KEY (HotelID) REFERENCES Hotel,
-    CONSTRAINT chk_access CHECK (AccessMode IN ('lift', 'stairs')),
+	RoomNumber INT NOT NULL,
+	HotelID VARCHAR(15) NOT NULL,
+	AccessMode VARCHAR(10) NOT NULL,
+	NumWindows INT NOT NULL DEFAULT 0,
+	LastRenovatedYear INT,
+	PRIMARY KEY (RoomNumber, HotelID),
+	FOREIGN KEY (HotelID) REFERENCES Hotel (HotelID),
+	CONSTRAINT chk_access CHECK (AccessMode IN ('lift', 'stairs'))
 );
 
 --3.6 Review
