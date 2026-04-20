@@ -72,11 +72,11 @@ CREATE TABLE Address (   --strong entity
     FOREIGN KEY (CreditCardNumber) REFERENCES CreditCard(CreditCardNumber)
 );
 
---3.8 Credit Card
+-- 3.8 Credit Card
 CREATE TABLE CreditCard (  --strong entity
-    CreditCardNumber VARCHAR(30),
-    ClientEmail VARCHAR(100),
-    BillingAddressID INT,
+    CreditCardNumber VARCHAR(30) NOT NULL,
+    ClientEmail VARCHAR(100) NOT NULL,
+    BillingAddressID INT NOT NULL,
     PRIMARY KEY (CreditCardNumber),
     FOREIGN KEY (ClientEmail) REFERENCES Client(Email),
     FOREIGN KEY (BillingAddressID) REFERENCES Address(Number)
