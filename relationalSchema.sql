@@ -13,18 +13,6 @@ CREATE TABLE Client (
 	PRIMARY KEY (Email)
 );
 
--- 3.3 Booking
-CREATE TABLE Booking (
-    BookingID INT,
-    ClientEmail VARCHAR(100),
-    RoomNumber INT,
-    Price INT CHECK (Price >= 0),
-    Dates DATETIME NOT NULL,
-    FOREIGN KEY (ClientID) REFERENCES Client(Email),
-    FOREIGN KEY (RoomNumber) REFERENCES Room(RoomNumber),
-    PRIMARY KEY (BookingID, ClientEmail, RoomNumber)
-);
-
 -- 3.4 Hotel
 CREATE TABLE Hotel (
 	Name VARCHAR(100) NOT NULL,
@@ -45,20 +33,7 @@ CREATE TABLE Room (
 	CONSTRAINT chk_access CHECK (AccessMode IN ('lift', 'stairs'))
 );
 
---3.6 Review
-CREATE TABLE Review (
-    ReviewID INT,
-    Message VARCHAR(500),
-    Rating INT,
-    ClientEmail VARCHAR(100),
-    HotelID INT,
-    PRIMARY KEY  (ReviewID, HotelID),
-    FOREIGN KEY (HotelID) REFERENCES Hotel,
-    FOREIGN KEY (ClientID) REFERENCES Client(Email),
-    CONSTRAINT chk_rating CHECK (Rating BETWEEN 1 AND 5)
-);
-
---3.7 Address
+-- 3.7 Address
 CREATE TABLE Address (   --strong entity
     Street VARCHAR(50),
     City VARCHAR(50),
@@ -81,3 +56,29 @@ CREATE TABLE CreditCard (  --strong entity
     FOREIGN KEY (ClientEmail) REFERENCES Client(Email),
     FOREIGN KEY (BillingAddressID) REFERENCES Address(Number)
 );
+
+-- 3.3 Booking
+CREATE TABLE Booking (
+    BookingID INT,
+    ClientEmail VARCHAR(100),
+    RoomNumber INT,
+    Price INT CHECK (Price >= 0),
+    Dates DATETIME NOT NULL,
+    FOREIGN KEY (ClientID) REFERENCES Client(Email),
+    FOREIGN KEY (RoomNumber) REFERENCES Room(RoomNumber),
+    PRIMARY KEY (BookingID, ClientEmail, RoomNumber)
+);
+
+-- 3.6 Review
+CREATE TABLE Review (
+    ReviewID INT,
+    Message VARCHAR(500),
+    Rating INT,
+    ClientEmail VARCHAR(100),
+    HotelID INT,
+    PRIMARY KEY  (ReviewID, HotelID),
+    FOREIGN KEY (HotelID) REFERENCES Hotel,
+    FOREIGN KEY (ClientID) REFERENCES Client(Email),
+    CONSTRAINT chk_rating CHECK (Rating BETWEEN 1 AND 5)
+);
+
