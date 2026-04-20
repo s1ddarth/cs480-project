@@ -64,7 +64,7 @@ CREATE TABLE Booking (
     RoomNumber INT,
     Price INT CHECK (Price >= 0),
     Dates DATETIME NOT NULL,
-    FOREIGN KEY (ClientID) REFERENCES Client(Email),
+    FOREIGN KEY (ClientEmail) REFERENCES Client(Email),
     FOREIGN KEY (RoomNumber) REFERENCES Room(RoomNumber),
     PRIMARY KEY (BookingID, ClientEmail, RoomNumber)
 );
@@ -78,7 +78,7 @@ CREATE TABLE Review (
     HotelID VARCHAR(15),
     PRIMARY KEY  (ReviewID, HotelID),
     FOREIGN KEY (HotelID) REFERENCES Hotel(HotelID),
-    FOREIGN KEY (ClientID) REFERENCES Client(Email),
+    FOREIGN KEY (ClientEmail) REFERENCES Client(Email),
     CONSTRAINT chk_rating CHECK (Rating BETWEEN 0 AND 10)
 );
 
