@@ -27,9 +27,9 @@ CREATE TABLE Booking (
 
 -- 3.4 Hotel
 CREATE TABLE Hotel (
-	Name VARCHAR,
-	HotelID CHAR(15),
-	Address VARCHAR,
+	Name VARCHAR(100) NOT NULL,
+	HotelID VARCHAR(15) NOT NULL,
+	Address VARCHAR(500) NOT NULL,
 	PRIMARY KEY (HotelID)
 );
 
