@@ -78,6 +78,6 @@ CREATE TABLE Review (
     PRIMARY KEY  (ReviewID, HotelID),
     FOREIGN KEY (HotelID) REFERENCES Hotel(HotelID),
     FOREIGN KEY (ClientID) REFERENCES Client(Email),
-    CONSTRAINT chk_rating CHECK (Rating BETWEEN 1 AND 5)
+    CONSTRAINT chk_rating CHECK (Rating BETWEEN 0 AND 10)
 );
 
