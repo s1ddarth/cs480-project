@@ -60,6 +60,7 @@ CREATE TABLE CreditCard (  --strong entity
 CREATE TABLE Booking (
     BookingID INT,
     ClientEmail VARCHAR(100),
+    HotelID VARCHAR(15),
     RoomNumber INT,
     Price INT CHECK (Price >= 0),
     Dates DATETIME NOT NULL,
@@ -74,7 +75,7 @@ CREATE TABLE Review (
     Message VARCHAR(500),
     Rating INT,
     ClientEmail VARCHAR(100),
-    HotelID INT,
+    HotelID VARCHAR(15),
     PRIMARY KEY  (ReviewID, HotelID),
     FOREIGN KEY (HotelID) REFERENCES Hotel(HotelID),
     FOREIGN KEY (ClientID) REFERENCES Client(Email),
