@@ -40,11 +40,10 @@ CREATE TABLE Address (   --strong entity
     Number INT,
     CreditCardNumber INT,
     ClientEmail VARCHAR(100),
-    Hotel VARCHAR(100),
+    Hotel VARCHAR(15),
     PRIMARY KEY (Number),
     FOREIGN KEY (ClientEmail) REFERENCES Client(Email),
-    FOREIGN KEY (Hotel) REFERENCES Hotel(HoetelID),
-    FOREIGN KEY (CreditCardNumber) REFERENCES CreditCard(CreditCardNumber)
+    FOREIGN KEY (Hotel) REFERENCES Hotel(HotelID)
 );
 
 -- 3.8 Credit Card
