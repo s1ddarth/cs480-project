@@ -91,15 +91,15 @@ class HotelCLI:
         elif query == 8:
             self.show_top_k_clients()
         elif query == 9:
-            print("Test")
+            print("TODO")
         elif query == 10:
-            print("Test")
+            print("TODO")
         elif query == 11:
-            print("Test")
+            print("TODO")
         elif query == 12:
-            print("Test")
+            print("TODO")
         elif query == 13:
-            print("Test")
+            print("TODO")
         elif query == 14:
             self.register_manager()
         else:
