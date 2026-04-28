@@ -151,6 +151,7 @@ class HotelCLI:
         else:
             print("Unrecognized Request. Please Try Again.")
 
+    # Insert Hotel (4.1.2)
     def insert_hotel(self):
         newHotelID = self.read_int("Please Enter Hotel ID: ")
         newHotelName = input("Please Enter Hotel Name: ")
@@ -160,12 +161,14 @@ class HotelCLI:
                                 VALUES (%s, %s);""", (newHotelName, newHotelID, newAddress,))
         self.db.commit()
 
+    # Remove Hotel (4.1.3)
     def remove_hotel(self):
         deleteHotelID = self.read_int("Please Enter Hotel ID: ")
         self.db.cur.execute("""DELETE FROM Hotel
                                 WHERE HotelID = %s;""", (deleteHotelID,))
         self.db.commit()
 
+    # Update Hotel (4.1.4)
     def update_hotel(self):
         hotelID = self.read_int("Please Enter ID Of Hotel To Update: ")
         newHotelName = input("Please Enter Hotel Name: ")
@@ -176,6 +179,7 @@ class HotelCLI:
                                 WHERE HotelID = %s;""", (newHotelName, newAddress, hotelID,))
         self.db.commit()
 
+    # Insert Room (4.1.5)
     def insert_room(self):
         hotelID = self.read_int("Please Enter Hotel ID: ")
         roomNumber = self.read_int("Please Enter Room Number: ")
@@ -188,6 +192,7 @@ class HotelCLI:
                                  """, (roomNumber, hotelID, accessMode, numWindows, lastRenovatedYear,))
         self.db.commit()
 
+    # Remove Room (4.1.6)
     def remove_room(self):
         hotelName = input("Please Enter Hotel Name: ")
         roomNumber = self.read_int("Please Enter Room Number: ")
@@ -201,6 +206,7 @@ class HotelCLI:
                                 WHERE RoomNumber = %s AND HotelID = %s;""", (roomNumber, hotelID,))
         self.db.commit()
 
+    # Update Room (4.1.7)
     def update_room(self):
         hotelName = input("Please Enter Hotel Name: ")
         roomNumber = self.read_int("Please Enter Room Number: ")
@@ -221,6 +227,7 @@ class HotelCLI:
                                 WHERE RoomNumber = %s AND HotelID = %s;""", (accessMode, numWindows, lastRenovatedYear, roomNumber, hotelID,))
         self.db.commit()
 
+    # Remove Client (4.1.8)
     def remove_client(self):
         # Deletes by client email
         clientEmail = input("Please Enter Client Email To Remove: ")
@@ -228,6 +235,7 @@ class HotelCLI:
                                 WHERE Email = %s;""", (clientEmail,))
         self.db.commit()
 
+    # Show Top K Clients (4.1.9)
     def show_top_k_clients(self):
         kNum = self.read_int("Please Enter The K Number Of Clients To Return: ")
 
@@ -243,6 +251,7 @@ class HotelCLI:
         for row in rows:
             print(f"Name: {row[0]}, Email: {row[1]}")
 
+    # Register Manager (4.1.10)
     def register_manager(self):
         newManagerName = input("Please Enter New Manager Name: ")
         newManagerEmail = input("Please Enter New Manager Email: ")
