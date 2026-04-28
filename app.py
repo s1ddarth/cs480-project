@@ -44,6 +44,16 @@ try:
             else:
                 print("Incorrect SSN. Please Try Again")
 
+    def manager_menu_loop(self):
+        while True:
+            self.print_manager_menu()
+            query = self.read_int("Enter Your Query Here: ")
+
+            if query == -1:
+                break
+
+            self.handle_manager_query(query)
+
     @staticmethod
     def print_manager_menu():
         print("1 - Insert New Hotel")
