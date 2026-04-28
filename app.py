@@ -132,20 +132,18 @@ class HotelCLI:
                                  """, (roomNumber, hotelID, accessMode, numWindows, lastRenovatedYear,))
         self.db.commit()
 
+    def remove_room(self):
+        hotelName = input("Please Enter Hotel Name: ")
+        roomNumber = self.read_int("Please Enter Room Number: ")
+        hotelID = self.db.get_hotel_id(hotelName)
 
-                    # If not found, return
-                    if hotelID is None:
-                        print("Hotel not found.")
-                        continue
+        if hotelID is None:
+            print("Hotel not found.")
+            return
 
-                    # Then query with hotel ID
-                    cur.execute("""DELETE FROM Room
+        self.db.cur.execute("""DELETE FROM Room
                                 WHERE RoomNumber = %s AND HotelID = %s;""", (roomNumber, hotelID,))
-                    
-                    conn.commit()
-                    
-                # Update Room (4.1.2)
-                case 6:
+        self.db.commit()
 
     def update_room(self):
         hotelName = input("Please Enter Hotel Name: ")
