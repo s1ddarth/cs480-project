@@ -62,15 +62,40 @@ try:
         print("14 - Register New Manager")
         print("-1 - Quit")
 
-                    cur.execute("""INSERT INTO Hotel (Name, HotelID, Address)
-                                VALUES (%s, %s);""", (newHotelName, newHotelID, newAddress,))
-                    
-                    conn.commit()
+    def handle_manager_query(self, query):
+        if query == 1:
+            self.insert_hotel()
+        elif query == 2:
+            self.remove_hotel()
+        elif query == 3:
+            self.update_hotel()
+        elif query == 4:
+            self.insert_room()
+        elif query == 5:
+            self.remove_room()
+        elif query == 6:
+            self.update_room()
+        elif query == 7:
+            self.remove_client()
+        elif query == 8:
+            self.show_top_k_clients()
+        elif query == 9:
+            print("Test")
+        elif query == 10:
+            print("Test")
+        elif query == 11:
+            print("Test")
+        elif query == 12:
+            print("Test")
+        elif query == 13:
+            print("Test")
+        elif query == 14:
+            self.register_manager()
+        else:
+            print("Unrecognized Request. Please Try Again.")
 
-                # Remove Hotel (4.1.2)
-                case 2:
-                    
-                    deleteHotelID = int(input("Please Enter Hotel ID: "))
+    def insert_hotel(self):
+        new_hotel_id = self.read_int("Please Enter Hotel ID: "))
                     
                     cur.execute("""DELETE FROM Hotel
                                 WHERE HotelID = %s;""", (deleteHotelID,))
