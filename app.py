@@ -33,6 +33,28 @@ class Database:
         )
         self.cur = self.conn.cursor()
 
+    def close(self):
+        if self.cur:
+            self.cur.close()
+        if self.conn:
+            self.conn.close()
+
+    def commit(self):
+        self.conn.commit()
+
+    def get_hotel_id(self, hotel_name):
+        self.cur.execute(
+            """
+            SELECT HotelID
+            FROM Hotel
+            WHERE Name = %s;
+            """,
+            (hotel_name,),
+        )
+        row = self.cur.fetchone()
+        return row[0] if row else None
+
+
 class HotelCLI:
     def __init__(self, db):
         self.db = db
