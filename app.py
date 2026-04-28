@@ -21,35 +21,24 @@ def load_env_file(path=".env"):
                 os.environ[key] = value
 
 
-try:
-    # Establish the connection
-    conn = psycopg2.connect(
-        dbname="CS480Project",
-        user="your_username",
-        password="your_password",
-        host="localhost",
-        port="5432"
-    )
 
-    # Create a cursor object to perform database operations
-    cur = conn.cursor()
+class HotelCLI:
+    def __init__(self, db):
+        self.db = db
 
-    login = False
+    def run(self):
+        user_type = self.read_int("Are You A Manager (1) Or A Client (2)?: ")
 
-    userType = int(input("Are You A Manager (1) Or A Client (2)?: "))
+        if user_type == 1:
+            self.manager_flow()
+        elif user_type == 2:
+            print("Test")
+        else:
+            print("Unrecognized")
 
-    # User is Manager
-    if (userType == 1):
-
-        while (login == False):
-            # Manager Login  (4.1.1)
-            managerSSN = input("Please Enter Your SSN: ")
-
-            # Check SSN
-            cur.execute("""SELECT *
-                        FROM Managers
-                        WHERE SSN = %s;""", (managerSSN,))
-            rows = cur.fetchall()
+    def manager_flow(self):
+        self.manager_login()
+        self.manager_menu_loop()
 
             if (len(rows) > 0):
                 login = True
