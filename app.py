@@ -40,10 +40,23 @@ class HotelCLI:
         self.manager_login()
         self.manager_menu_loop()
 
-            if (len(rows) > 0):
-                login = True
-            else:
-                print("Incorrect SSN. Please Try Again")
+    def manager_login(self):
+        while True:
+            managerSSN = input("Please Enter Your SSN: ")
+            self.db.cur.execute(
+                """
+                SELECT *
+                FROM Managers
+                WHERE SSN = %s;
+                """,
+                (managerSSN,),
+            )
+            rows = self.db.cur.fetchall()
+
+            if len(rows) > 0:
+                return
+
+            print("Incorrect SSN. Please Try Again")
 
     def manager_menu_loop(self):
         while True:
