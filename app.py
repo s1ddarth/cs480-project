@@ -214,46 +214,18 @@ class HotelCLI:
                     newManagerEmail = input("Please Enter New Manager Email: ")
                     newManagerSSN = input("Please Enter New Manager SSN: ")
 
-                    cur.execute("""INSERT INTO Managers (Name, Email, SSN)
-                                 VALUES (%s, %s, %s);
-                                 """, (newManagerName, newManagerEmail, newManagerSSN,))
-                    
-                    conn.commit()
+def main():
+    db = None
+    try:
+        db = Database()
+        app = HotelCLI(db)
+        app.run()
+    except Exception as e:
+        print(f"Error: {e}")
+    finally:
+        if db:
+            db.close()
 
-                # Exit
-                case -1:
-                    break
-                
-                # Unrecognized
-                case _:
-                    print("Unrecognized Request. Please Try Again.") 
 
-    # User is Client
-    elif (userType == 2):
-        print("Test")
-
-    # Unrecognized Type
-    else:
-        print("Unrecognized")
-    
-
-    # Execute a query
-    # cur.execute("SELECT id, name FROM users WHERE id < %s;", (10,))
-
-    # Retrieve query results
-    # Use fetchall() for all rows, or fetchone() for just one
-    # rows = cur.fetchall()
-    
-    #for row in rows:
-    #    print(f"ID: {row[0]}, Name: {row[1]}")
-
-except Exception as e:
-    print(f"Error: {e}")
-
-finally:
-    # Close communication with the database
-    if cur:
-        cur.close()
-    if conn:
-        conn.close()
-     
+if __name__ == "__main__":
+    main()
