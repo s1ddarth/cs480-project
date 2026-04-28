@@ -1,3 +1,4 @@
+import os
 import psycopg2
 
 # Get the associated hotel ID (For Room Functions)
