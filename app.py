@@ -106,19 +106,15 @@ class HotelCLI:
             print("Unrecognized Request. Please Try Again.")
 
     def insert_hotel(self):
-        new_hotel_id = self.read_int("Please Enter Hotel ID: "))
-                    
-                    cur.execute("""DELETE FROM Hotel
-                                WHERE HotelID = %s;""", (deleteHotelID,))
-                    
-                    conn.commit()
-                    
-                # Update Hotel (4.1.2)
-                case 3:
-                    
-                    hotelID = int(input("Please Enter ID Of Hotel To Update: "))
-                    newHotelName = input("Please Enter Hotel Name: ")
-                    newAddress = input("Please Enter New Hotel's Address: ")
+    def update_hotel(self):
+        hotelID = self.read_int("Please Enter ID Of Hotel To Update: ")
+        newHotelName = input("Please Enter Hotel Name: ")
+        newAddress = input("Please Enter New Hotel's Address: ")
+
+        self.db.cur.execute("""UPDATE Hotel
+                                SET Name = %s, Address = %s
+                                WHERE HotelID = %s;""", (newHotelName, newAddress, hotelID,))
+        self.db.commit()
 
     def insert_room(self):
         hotelID = self.read_int("Please Enter Hotel ID: ")
