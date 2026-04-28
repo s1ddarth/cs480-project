@@ -106,6 +106,14 @@ class HotelCLI:
             print("Unrecognized Request. Please Try Again.")
 
     def insert_hotel(self):
+        newHotelID = self.read_int("Please Enter Hotel ID: ")
+        newHotelName = input("Please Enter Hotel Name: ")
+        newAddress = input("Please Enter New Hotel's Address: ")
+
+        self.db.cur.execute("""INSERT INTO Hotel (Name, HotelID, Address)
+                                VALUES (%s, %s);""", (newHotelName, newHotelID, newAddress,))
+        self.db.commit()
+
     def remove_hotel(self):
         deleteHotelID = self.read_int("Please Enter Hotel ID: ")
         self.db.cur.execute("""DELETE FROM Hotel
