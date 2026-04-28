@@ -44,31 +44,23 @@ try:
             else:
                 print("Incorrect SSN. Please Try Again")
 
-        
-        while (True):
-
-            print("1 - Insert New Hotel")
-            print("2 - Remove Hotel")
-            print("3 - Update Hotel")
-            print("4 - Insert New Room")
-            print("5 - Remove Room")
-            print("6 - Update Room")
-            print("7 - Remove Client")
-            print("8 - Show Top K Clients")
-            # Other Prompts Here
-            print("14 - Register New Manager")
-            print("-1 - Exit")
-
-
-            query = int(input("Enter Your Query Here: "))
-
-            match query:
-                # Insert Hotel (4.1.2)
-                case 1:
-                    
-                    newHotelID = int(input("Please Enter Hotel ID: "))
-                    newHotelName = input("Please Enter Hotel Name: ")
-                    newAddress = input("Please Enter New Hotel's Address: ") 
+    @staticmethod
+    def print_manager_menu():
+        print("1 - Insert New Hotel")
+        print("2 - Remove Hotel")
+        print("3 - Update Hotel")
+        print("4 - Insert New Room")
+        print("5 - Remove Room")
+        print("6 - Update Room")
+        print("7 - Remove Client")
+        print("8 - Show Top K Clients")
+        print("9 - List of All Hotel Rooms and Number of Bookings")
+        print("10 - List of Hotels and Info")
+        print("11 - Clients to Hotels on cities")
+        print("12 - Problematic Chicago Hotels")
+        print("13 - Clients list and amount spent")
+        print("14 - Register New Manager")
+        print("-1 - Quit")
 
                     cur.execute("""INSERT INTO Hotel (Name, HotelID, Address)
                                 VALUES (%s, %s);""", (newHotelName, newHotelID, newAddress,))
