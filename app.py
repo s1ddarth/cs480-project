@@ -1,5 +1,6 @@
 import os
 import psycopg2
+from datetime import date
 
 
 def load_env_file(path=".env"):
@@ -322,6 +323,15 @@ class HotelCLI:
                 return int(input(prompt))
             except ValueError:
                 print("Please enter a valid number.")
+
+    @staticmethod
+    def read_date(prompt):
+        while True:
+            value = input(prompt).strip()
+            try:
+                return date.fromisoformat(value)
+            except ValueError:
+                print("Please enter a valid date in YYYY-MM-DD format.")
 
 
 def main():
