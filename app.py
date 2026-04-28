@@ -172,20 +172,20 @@ class HotelCLI:
                                 WHERE Email = %s;""", (clientEmail,))
         self.db.commit()
 
+    def show_top_k_clients(self):
+        kNum = self.read_int("Please Enter The K Number Of Clients To Return: ")
 
-                    cur.execute("""SELECT C.Name, C.Email, COUNT(*) as booking_count
+        self.db.cur.execute("""SELECT C.Name, C.Email, COUNT(*) as booking_count
                                 FROM Client C
                                 JOIN Booking B ON C.Email = B.ClientEmail
                                 GROUP BY C.Name, C.Email
                                 ORDER BY booking_count DESC
                                 LIMIT %s;
                                 """, (kNum,))
+        rows = self.db.cur.fetchall()
 
-                    # Retrieve query results
-                    rows = cur.fetchall()
-    
-                    for row in rows:
-                        print(f"Name: {row[0]}, Email: {row[1]}")
+        for row in rows:
+            print(f"Name: {row[0]}, Email: {row[1]}")
 
                 # List of All Hotel Rooms and Number of Bookings (4.1.5)
                 case 9:
