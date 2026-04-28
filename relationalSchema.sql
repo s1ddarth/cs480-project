@@ -58,15 +58,16 @@ CREATE TABLE CreditCard (  --strong entity
 
 -- 3.3 Booking
 CREATE TABLE Booking (
-    BookingID INT,
+    BookingID INT PRIMARY KEY,
     ClientEmail VARCHAR(100),
     HotelID VARCHAR(15),
     RoomNumber INT,
     Price INT CHECK (Price >= 0),
-    Dates DATETIME NOT NULL,
+    StartDate DATE NOT NULL,
+    EndDate DATE NOT NULL,
     FOREIGN KEY (ClientEmail) REFERENCES Client(Email),
-    FOREIGN KEY (RoomNumber) REFERENCES Room(RoomNumber),
-    PRIMARY KEY (BookingID, ClientEmail, RoomNumber)
+    FOREIGN KEY (HotelID, RoomNumber) REFERENCES Room(HotelID, RoomNumber),
+    CONSTRAINT chk_booking_dates CHECK (StartDate <= EndDate)
 );
 
 -- 3.6 Review
