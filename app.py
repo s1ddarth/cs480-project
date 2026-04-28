@@ -146,31 +146,27 @@ class HotelCLI:
                     
                 # Update Room (4.1.2)
                 case 6:
-                    
-                    hotelName = input("Please Enter Hotel Name: ")
-                    roomNumber = int(input("Please Enter Room Number: "))
-                    accessMode = input("Please Enter Access Mode: ")
-                    numWindows = int(input("Please Enter Number Of Windows: "))
-                    lastRenovatedYear = int(input("Please Enter Last Year Of Renovation: "))
 
-                    # Get associated hotel ID first
-                    hotelID = getHotelID(hotelName)
+    def update_room(self):
+        hotelName = input("Please Enter Hotel Name: ")
+        roomNumber = self.read_int("Please Enter Room Number: ")
+        accessMode = input("Please Enter Access Mode: ")
+        numWindows = self.read_int("Please Enter Number Of Windows: ")
+        lastRemnovatedYear = self.read_int("Please Enter Last Year Of Renovation: ")
+        # Get associated hotel ID first
+        hotelID = self.db.get_hotel_id(hotel_name)
 
-                    # If not found, return
-                    if hotelID is None:
-                        print("Hotel not found.")
-                        continue
+        # If not found, return
+        if hotelID is None:
+            print("Hotel not found.")
+            return
 
-                    # Then query with hotel ID
-                    cur.execute("""UPDATE Room
+        # Then query with hotel ID
+        self.db.cur.execute("""UPDATE Room
                                 SET AccessMode = %s, NumWindows = %s, LastRenovatedYear = %s
                                 WHERE RoomNumber = %s AND HotelID = %s;""", (accessMode, numWindows, lastRenovatedYear, roomNumber, hotelID,))
-                    
-                    conn.commit()
+        self.db.commit()
 
-                # Remove Clients (4.1.3)
-                case 7:
-                    
     def remove_client(self):
         # Deletes by client email
         clientEmail = input("Please Enter Client Email To Remove: ")
