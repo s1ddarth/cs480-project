@@ -120,36 +120,18 @@ class HotelCLI:
                     newHotelName = input("Please Enter Hotel Name: ")
                     newAddress = input("Please Enter New Hotel's Address: ")
 
-                    cur.execute("""UPDATE Hotel
-                                SET Name = %s, Address = %s
-                                WHERE HotelID = %s;""", (newHotelName, newAddress, hotelID,))
-                    
-                    conn.commit()
+    def insert_room(self):
+        hotelID = self.read_int("Please Enter Hotel ID: ")
+        roomNumber = self.read_int("Please Enter Room Number: ")
+        accessMode = input("Please Enter Access Mode: ")
+        numWindows = self.read_int("Please Enter Number Of Windows: ")
+        lastRenovatedYear = self.read_int("Please Enter Last Year Of Renovation: ")
 
-                # Insert Room (4.1.2)
-                case 4:
-                    
-                    hotelID = int(input("Please Enter Hotel ID: "))
-                    roomNumber = int(input("Please Enter Room Number: "))
-                    accessMode = input("Please Enter Access Mode: ")
-                    numWindows = int(input("Please Enter Number Of Windows: "))
-                    lastRenovatedYear = int(input("Please Enter Last Year Of Renovation: "))
-
-                    # Then query with hotel ID
-                    cur.execute("""INSERT INTO Room (RoomNumber, HotelID, AccessMode, NumWindows, LastRenovatedYear)
+        self.db. cur.execute("""INSERT INTO Room (RoomNumber, HotelID, AccessMode, NumWindows, LastRenovatedYear)
                                  VALUES (%s, %s, %s, %s, %s);
                                  """, (roomNumber, hotelID, accessMode, numWindows, lastRenovatedYear,))
-                    
-                    conn.commit()
-                
-                # Remove Room (4.1.2)
-                case 5:
-                    
-                    hotelName = input("Please Enter Hotel Name: ")
-                    roomNumber = int(input("Please Enter Room Number: "))
+        self.db.commit()
 
-                    # Get associated hotel ID first
-                    hotelID = getHotelID(hotelName)
 
                     # If not found, return
                     if hotelID is None:
