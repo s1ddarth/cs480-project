@@ -187,33 +187,15 @@ class HotelCLI:
         for row in rows:
             print(f"Name: {row[0]}, Email: {row[1]}")
 
-                # List of All Hotel Rooms and Number of Bookings (4.1.5)
-                case 9:
-                    print("Test")
-                
-                # List of Hotels and Info  (4.1.6)
-                case 10:
-                    print("Test")
+    def register_manager(self):
+        newManagerName = input("Please Enter New Manager Name: ")
+        newManagerEmail = input("Please Enter New Manager Email: ")
+        newManagerSSN = input("Please Enter New Manager SSN: ")
 
-                # Clients to Hotels on cities (4.1.7)
-                case 11:
-                    print("Test")
-
-                # Problematic Chicago Hotels (4.1.8)
-                case 12:
-                    print("Test")
-
-                # Clients list and amount spent (4.1.9)
-                case 13:
-                    print("Test")
-
-                # Add New Manager (4.1.1)
-                case 14:
-                    
-                    newManagerName = input("Please Enter New Manager Name: ")
-                    newManagerEmail = input("Please Enter New Manager Email: ")
-                    newManagerSSN = input("Please Enter New Manager SSN: ")
-
+        self.db.cur.execute("""INSERT INTO Managers (Name, Email, SSN)
+                                 VALUES (%s, %s, %s);
+                                 """, (newManagerName, newManagerEmail, newManagerSSN,))
+        self.db.commit()
 def main():
     db = None
     try:
