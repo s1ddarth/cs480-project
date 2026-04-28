@@ -58,6 +58,7 @@ class Database:
 class HotelCLI:
     def __init__(self, db):
         self.db = db
+        self.current_client_email = None
 
     def run(self):
         user_type = self.read_int("Are You A Manager (1) Or A Client (2)?: ")
@@ -65,13 +66,65 @@ class HotelCLI:
         if user_type == 1:
             self.manager_flow()
         elif user_type == 2:
-            print("Test")
+            self.client_menu()
         else:
             print("Unrecognized")
 
     def manager_flow(self):
         self.manager_login()
         self.manager_menu_loop()
+
+    def client_menu(self):
+        self.client_login()
+        self.client_menu_loop()
+
+    def client_login(self):
+        while True:
+            client_email = input("Please Enter Your Email: ").strip()
+            self.db.cur.execute(
+                """
+                SELECT Email
+                FROM Client
+                WHERE Email = %s;
+                """,
+                (client_email,),
+            )
+            row = self.db.cur.fetchone()
+            if row:
+                self.current_client_email = row[0]
+                return
+
+            print("Client not found. Please Try Again.")
+
+    def client_menu_loop(self):
+        while True:
+            self.print_client_menu()
+            query = self.read_int("Enter Your Query Here: ")
+
+            if query == -1:
+                break
+
+            self.handle_client_query(query)
+
+    @staticmethod
+    def print_client_menu():
+        print("1 - Book Specific Room")
+        print("2 - Submit Hotel Review")
+        print("3 - View My Bookings")
+        print("4 - Automatic Booking")
+        print("-1 - Quit")
+
+    def handle_client_query(self, query):
+        if query == 1:
+            self.book_specific_room()
+        elif query == 2:
+            self.submit_review()
+        elif query == 3:
+            self.view_my_bookings()
+        elif query == 4:
+            self.automatic_booking()
+        else:
+            print("Unrecognized Request. Please Try Again.")
 
     def manager_login(self):
         while True:
