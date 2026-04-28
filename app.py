@@ -206,9 +206,9 @@ class HotelCLI:
         roomNumber = self.read_int("Please Enter Room Number: ")
         accessMode = input("Please Enter Access Mode: ")
         numWindows = self.read_int("Please Enter Number Of Windows: ")
-        lastRemnovatedYear = self.read_int("Please Enter Last Year Of Renovation: ")
+        lastRenovatedYear = self.read_int("Please Enter Last Year Of Renovation: ")
         # Get associated hotel ID first
-        hotelID = self.db.get_hotel_id(hotel_name)
+        hotelID = self.db.get_hotel_id(hotelName)
 
         # If not found, return
         if hotelID is None:
