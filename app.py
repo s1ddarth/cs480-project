@@ -21,6 +21,17 @@ def load_env_file(path=".env"):
                 os.environ[key] = value
 
 
+class Database:
+    def __init__(self):
+        load_env_file()
+        self.conn = psycopg2.connect(
+            dbname=os.getenv("DB_NAME", "CS480Project"),
+            user=os.getenv("DB_USER", "username"),
+            password=os.getenv("DB_PASSWORD", "password"),
+            host=os.getenv("DB_HOST", "localhost"),
+            port=os.getenv("DB_PORT", "5432"),
+        )
+        self.cur = self.conn.cursor()
 
 class HotelCLI:
     def __init__(self, db):
