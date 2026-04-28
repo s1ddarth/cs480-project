@@ -171,18 +171,13 @@ class HotelCLI:
                 # Remove Clients (4.1.3)
                 case 7:
                     
-                    # Deletes by client email
-                    clientEmail = input("Please Enter Client Email To Remove: ")
-
-                    cur.execute("""DELETE FROM Client
+    def remove_client(self):
+        # Deletes by client email
+        clientEmail = input("Please Enter Client Email To Remove: ")
+        self.db.cur.execute("""DELETE FROM Client
                                 WHERE Email = %s;""", (clientEmail,))
-                    
-                    conn.commit()
+        self.db.commit()
 
-                # Return Top K Clients (4.1.4)
-                case 8:
-                    
-                    kNum = int(input("Please Enter The K Number Of Clients To Return: "))
 
                     cur.execute("""SELECT C.Name, C.Email, COUNT(*) as booking_count
                                 FROM Client C
