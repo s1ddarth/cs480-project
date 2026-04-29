@@ -82,3 +82,4 @@ CREATE TABLE Review (
     FOREIGN KEY (ClientEmail) REFERENCES Client(Email),
     CONSTRAINT chk_rating CHECK (Rating BETWEEN 0 AND 10)
 );
+
