@@ -412,6 +412,29 @@ class HotelCLI:
         print(f"Review {review_id} submitted.")
 
     # View my bookings (4.2.6)
+    def view_my_bookings(self):
+        self.db.cur.execute(
+            """
+            SELECT H.Name, B.HotelID, B.RoomNumber, B.StartDate, B.EndDate, B.Price,
+                   ((B.EndDate - B.StartDate + 1) * B.Price) AS TotalCost
+            FROM Booking B
+            JOIN Hotel H ON H.HotelID = B.HotelID
+            WHERE B.ClientEmail = %s
+            ORDER BY B.StartDate DESC;
+            """,
+            (self.current_client_email,),
+        )
+        rows = self.db.cur.fetchall()
+
+        if not rows:
+            print("No bookings found.")
+            return
+
+        for row in rows:
+            print(
+                f"Hotel: {row[0]} ({row[1]}), Room: {row[2]}, Dates: {row[3]} to {row[4]}, "
+                f"Price/Day: {row[5]}, Total Cost: {row[6]}"
+            )
 
     def get_next_booking_id(self):
         self.db.cur.execute(""" SELECT CASE
