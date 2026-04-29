@@ -370,7 +370,24 @@ class HotelCLI:
         self.db.commit()
         print(f"Booking successful. BookingID: {booking_id}")
 
-    # Submit review only after prior stay (4.2.7)
+
+    def get_next_booking_id(self):
+        self.db.cur.execute(""" SELECT CASE
+                                WHEN COUNT(*) = 0 THEN 1
+                                ELSE MAX(BookingID) + 1
+                                END
+                                FROM Booking;""")
+        return self.db.cur.fetchone()[0]
+
+    def get_next_review_id(self, hotel_id):
+        self.db.cur.execute("""SELECT CASE
+                                WHEN COUNT(*) = 0 THEN 1
+                                ELSE MAX(ReviewID) + 1
+                                END
+                                FROM Review
+                                WHERE HotelID = %s;""", (hotel_id,))
+        return self.db.cur.fetchone()[0]
+
     @staticmethod
     def read_int(prompt):
         while True:
