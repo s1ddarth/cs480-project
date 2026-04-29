@@ -1,5 +1,6 @@
 import os
 import psycopg2
+from datetime import date
 
 
 def load_env_file(path=".env"):
@@ -58,6 +59,7 @@ class Database:
 class HotelCLI:
     def __init__(self, db):
         self.db = db
+        self.current_client_email = None
 
     def run(self):
         user_type = self.read_int("Are You A Manager (1) Or A Client (2)?: ")
@@ -65,13 +67,65 @@ class HotelCLI:
         if user_type == 1:
             self.manager_flow()
         elif user_type == 2:
-            print("Test")
+            self.client_menu()
         else:
             print("Unrecognized")
 
     def manager_flow(self):
         self.manager_login()
         self.manager_menu_loop()
+
+    def client_menu(self):
+        self.client_login()
+        self.client_menu_loop()
+
+    def client_login(self):
+        while True:
+            client_email = input("Please Enter Your Email: ").strip()
+            self.db.cur.execute(
+                """
+                SELECT Email
+                FROM Client
+                WHERE Email = %s;
+                """,
+                (client_email,),
+            )
+            row = self.db.cur.fetchone()
+            if row:
+                self.current_client_email = row[0]
+                return
+
+            print("Client not found. Please Try Again.")
+
+    def client_menu_loop(self):
+        while True:
+            self.print_client_menu()
+            query = self.read_int("Enter Your Query Here: ")
+
+            if query == -1:
+                break
+
+            self.handle_client_query(query)
+
+    @staticmethod
+    def print_client_menu():
+        print("1 - Book Specific Room")
+        print("2 - Submit Hotel Review")
+        print("3 - View My Bookings")
+        print("4 - Automatic Booking")
+        print("-1 - Quit")
+
+    def handle_client_query(self, query):
+        if query == 1:
+            self.book_specific_room()
+        elif query == 2:
+            self.submit_review()
+        elif query == 3:
+            self.view_my_bookings()
+        elif query == 4:
+            self.automatic_booking()
+        else:
+            print("Unrecognized Request. Please Try Again.")
 
     def manager_login(self):
         while True:
@@ -262,6 +316,222 @@ class HotelCLI:
                                  """, (newManagerName, newManagerEmail, newManagerSSN,))
         self.db.commit()
 
+    # Book specific room (4.2.4)
+    def book_specific_room(self):
+        hotel_name = input("Enter Hotel Name: ").strip()
+        room_number = self.read_int("Enter Room Number: ")
+        start_date = self.read_date("Enter Start Date (YYYY-MM-DD): ")
+        end_date = self.read_date("Enter End Date (YYYY-MM-DD): ")
+        price_per_day = self.read_int("Enter Price Per Day: ")
+
+        if start_date > end_date:
+            print("Start date must be on or before end date.")
+            return
+
+        hotel_id = self.db.get_hotel_id(hotel_name)
+        if hotel_id is None:
+            print("Hotel not found.")
+            return
+
+        self.db.cur.execute(
+            """
+            SELECT 1
+            FROM Room
+            WHERE HotelID = %s AND RoomNumber = %s;
+            """,
+            (hotel_id, room_number),
+        )
+        if self.db.cur.fetchone() is None:
+            print("Room not found at this hotel.")
+            return
+
+        self.db.cur.execute(
+            """
+            SELECT 1
+            FROM Booking
+            WHERE HotelID = %s
+              AND RoomNumber = %s
+              AND NOT (EndDate < %s OR StartDate > %s);
+            """,
+            (hotel_id, room_number, start_date, end_date),
+        )
+        if self.db.cur.fetchone():
+            print("Room is not available for this date range.")
+            return
+
+        booking_id = self.get_next_booking_id()
+        self.db.cur.execute(
+            """
+            INSERT INTO Booking (BookingID, ClientEmail, HotelID, RoomNumber, Price, StartDate, EndDate)
+            VALUES (%s, %s, %s, %s, %s, %s, %s);
+            """,
+            (booking_id, self.current_client_email, hotel_id, room_number, price_per_day, start_date, end_date),
+        )
+        self.db.commit()
+        print(f"Booking successful. BookingID: {booking_id}")
+
+    # Submit review check (4.2.7)
+    def submit_review(self):
+        hotel_name = input("Enter Hotel Name For Review: ").strip()
+        rating = self.read_int("Enter Rating (0-10): ")
+        message = input("Enter Review Message: ").strip()
+
+        if rating < 0 or rating > 10:
+            print("Rating must be between 0 and 10.")
+            return
+
+        hotel_id = self.db.get_hotel_id(hotel_name)
+        if hotel_id is None:
+            print("Hotel not found.")
+            return
+
+        self.db.cur.execute(
+            """
+            SELECT 1
+            FROM Booking
+            WHERE ClientEmail = %s
+              AND HotelID = %s
+              AND EndDate < %s
+            LIMIT 1;
+            """,
+            (self.current_client_email, hotel_id, date.today()),
+        )
+        if self.db.cur.fetchone() is None:
+            print("You can only review hotels where you have previously stayed.")
+            return
+
+        review_id = self.get_next_review_id(hotel_id)
+        self.db.cur.execute(
+            """
+            INSERT INTO Review (ReviewID, Message, Rating, ClientEmail, HotelID)
+            VALUES (%s, %s, %s, %s, %s);
+            """,
+            (review_id, message, rating, self.current_client_email, hotel_id),
+        )
+        self.db.commit()
+        print(f"Review {review_id} submitted.")
+
+    # View my bookings (4.2.6)
+    def view_my_bookings(self):
+        self.db.cur.execute(
+            """
+            SELECT H.Name, B.HotelID, B.RoomNumber, B.StartDate, B.EndDate, B.Price,
+                   ((B.EndDate - B.StartDate + 1) * B.Price) AS TotalCost
+            FROM Booking B
+            JOIN Hotel H ON H.HotelID = B.HotelID
+            WHERE B.ClientEmail = %s
+            ORDER BY B.StartDate DESC;
+            """,
+            (self.current_client_email,),
+        )
+        rows = self.db.cur.fetchall()
+
+        if not rows:
+            print("No bookings found.")
+            return
+
+        for row in rows:
+            print(
+                f"Hotel: {row[0]} ({row[1]}), Room: {row[2]}, Dates: {row[3]} to {row[4]}, "
+                f"Price/Day: {row[5]}, Total Cost: {row[6]}"
+            )
+
+    # Automatic booking (4.2.5)
+    def automatic_booking(self):
+        hotel_name = input("Enter Hotel Name: ").strip()
+        start_date = self.read_date("Enter Start Date (YYYY-MM-DD): ")
+        end_date = self.read_date("Enter End Date (YYYY-MM-DD): ")
+        price_per_day = self.read_int("Enter Price Per Day: ")
+
+        if start_date > end_date:
+            print("Start date must be on or before end date.")
+            return
+
+        hotel_id = self.db.get_hotel_id(hotel_name)
+        if hotel_id is None:
+            print("Hotel not found.")
+            return
+
+        self.db.cur.execute(
+            """
+            SELECT R.RoomNumber
+            FROM Room R
+            WHERE R.HotelID = %s
+              AND NOT EXISTS (
+                  SELECT 1
+                  FROM Booking B
+                  WHERE B.HotelID = R.HotelID
+                    AND B.RoomNumber = R.RoomNumber
+                    AND NOT (B.EndDate < %s OR B.StartDate > %s)
+              )
+            ORDER BY R.RoomNumber
+            LIMIT 1;
+            """,
+            (hotel_id, start_date, end_date),
+        )
+        room_row = self.db.cur.fetchone()
+
+        if room_row:
+            room_number = room_row[0]
+            booking_id = self.get_next_booking_id()
+            self.db.cur.execute(
+                """
+                INSERT INTO Booking (BookingID, ClientEmail, HotelID, RoomNumber, Price, StartDate, EndDate)
+                VALUES (%s, %s, %s, %s, %s, %s, %s);
+                """,
+                (booking_id, self.current_client_email, hotel_id, room_number, price_per_day, start_date, end_date),
+            )
+            self.db.commit()
+            print(
+                f"Automatic booking successful. Hotel: {hotel_name}, Room: {room_number}, "
+                f"Dates: [{start_date}, {end_date}]"
+            )
+            return
+
+        print("No room available at this hotel for the provided dates.")
+        self.db.cur.execute(
+            """
+            SELECT DISTINCT H.Name
+            FROM Hotel H
+            JOIN Room R ON R.HotelID = H.HotelID
+            WHERE H.HotelID <> %s
+              AND NOT EXISTS (
+                  SELECT 1
+                  FROM Booking B
+                  WHERE B.HotelID = R.HotelID
+                    AND B.RoomNumber = R.RoomNumber
+                    AND NOT (B.EndDate < %s OR B.StartDate > %s)
+              )
+            ORDER BY H.Name;
+            """,
+            (hotel_id, start_date, end_date),
+        )
+        alternatives = [row[0] for row in self.db.cur.fetchall()]
+
+        if alternatives:
+            print("Alternatives:")
+            for alt in alternatives:
+                print(f"- {alt}")
+        else:
+            print("No alternatives found in this date range.")
+
+    def get_next_booking_id(self):
+        self.db.cur.execute(""" SELECT CASE
+                                WHEN COUNT(*) = 0 THEN 1
+                                ELSE MAX(BookingID) + 1
+                                END
+                                FROM Booking;""")
+        return self.db.cur.fetchone()[0]
+
+    def get_next_review_id(self, hotel_id):
+        self.db.cur.execute("""SELECT CASE
+                                WHEN COUNT(*) = 0 THEN 1
+                                ELSE MAX(ReviewID) + 1
+                                END
+                                FROM Review
+                                WHERE HotelID = %s;""", (hotel_id,))
+        return self.db.cur.fetchone()[0]
+
     @staticmethod
     def read_int(prompt):
         while True:
@@ -269,6 +539,15 @@ class HotelCLI:
                 return int(input(prompt))
             except ValueError:
                 print("Please enter a valid number.")
+
+    @staticmethod
+    def read_date(prompt):
+        while True:
+            value = input(prompt).strip()
+            try:
+                return date.fromisoformat(value)
+            except ValueError:
+                print("Please enter a valid date in YYYY-MM-DD format.")
 
 
 def main():
