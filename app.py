@@ -370,6 +370,48 @@ class HotelCLI:
         self.db.commit()
         print(f"Booking successful. BookingID: {booking_id}")
 
+    # Submit review check (4.2.7)
+    def submit_review(self):
+        hotel_name = input("Enter Hotel Name For Review: ").strip()
+        rating = self.read_int("Enter Rating (0-10): ")
+        message = input("Enter Review Message: ").strip()
+
+        if rating < 0 or rating > 10:
+            print("Rating must be between 0 and 10.")
+            return
+
+        hotel_id = self.db.get_hotel_id(hotel_name)
+        if hotel_id is None:
+            print("Hotel not found.")
+            return
+
+        self.db.cur.execute(
+            """
+            SELECT 1
+            FROM Booking
+            WHERE ClientEmail = %s
+              AND HotelID = %s
+              AND EndDate < %s
+            LIMIT 1;
+            """,
+            (self.current_client_email, hotel_id, date.today()),
+        )
+        if self.db.cur.fetchone() is None:
+            print("You can only review hotels where you have previously stayed.")
+            return
+
+        review_id = self.get_next_review_id(hotel_id)
+        self.db.cur.execute(
+            """
+            INSERT INTO Review (ReviewID, Message, Rating, ClientEmail, HotelID)
+            VALUES (%s, %s, %s, %s, %s);
+            """,
+            (review_id, message, rating, self.current_client_email, hotel_id),
+        )
+        self.db.commit()
+        print(f"Review {review_id} submitted.")
+
+    # View my bookings (4.2.6)
 
     def get_next_booking_id(self):
         self.db.cur.execute(""" SELECT CASE
