@@ -436,6 +436,85 @@ class HotelCLI:
                 f"Price/Day: {row[5]}, Total Cost: {row[6]}"
             )
 
+    # Automatic booking (4.2.5)
+    def automatic_booking(self):
+        hotel_name = input("Enter Hotel Name: ").strip()
+        start_date = self.read_date("Enter Start Date (YYYY-MM-DD): ")
+        end_date = self.read_date("Enter End Date (YYYY-MM-DD): ")
+        price_per_day = self.read_int("Enter Price Per Day: ")
+
+        if start_date > end_date:
+            print("Start date must be on or before end date.")
+            return
+
+        hotel_id = self.db.get_hotel_id(hotel_name)
+        if hotel_id is None:
+            print("Hotel not found.")
+            return
+
+        self.db.cur.execute(
+            """
+            SELECT R.RoomNumber
+            FROM Room R
+            WHERE R.HotelID = %s
+              AND NOT EXISTS (
+                  SELECT 1
+                  FROM Booking B
+                  WHERE B.HotelID = R.HotelID
+                    AND B.RoomNumber = R.RoomNumber
+                    AND NOT (B.EndDate < %s OR B.StartDate > %s)
+              )
+            ORDER BY R.RoomNumber
+            LIMIT 1;
+            """,
+            (hotel_id, start_date, end_date),
+        )
+        room_row = self.db.cur.fetchone()
+
+        if room_row:
+            room_number = room_row[0]
+            booking_id = self.get_next_booking_id()
+            self.db.cur.execute(
+                """
+                INSERT INTO Booking (BookingID, ClientEmail, HotelID, RoomNumber, Price, StartDate, EndDate)
+                VALUES (%s, %s, %s, %s, %s, %s, %s);
+                """,
+                (booking_id, self.current_client_email, hotel_id, room_number, price_per_day, start_date, end_date),
+            )
+            self.db.commit()
+            print(
+                f"Automatic booking successful. Hotel: {hotel_name}, Room: {room_number}, "
+                f"Dates: [{start_date}, {end_date}]"
+            )
+            return
+
+        print("No room available at this hotel for the provided dates.")
+        self.db.cur.execute(
+            """
+            SELECT DISTINCT H.Name
+            FROM Hotel H
+            JOIN Room R ON R.HotelID = H.HotelID
+            WHERE H.HotelID <> %s
+              AND NOT EXISTS (
+                  SELECT 1
+                  FROM Booking B
+                  WHERE B.HotelID = R.HotelID
+                    AND B.RoomNumber = R.RoomNumber
+                    AND NOT (B.EndDate < %s OR B.StartDate > %s)
+              )
+            ORDER BY H.Name;
+            """,
+            (hotel_id, start_date, end_date),
+        )
+        alternatives = [row[0] for row in self.db.cur.fetchall()]
+
+        if alternatives:
+            print("Alternatives:")
+            for alt in alternatives:
+                print(f"- {alt}")
+        else:
+            print("No alternatives found in this date range.")
+
     def get_next_booking_id(self):
         self.db.cur.execute(""" SELECT CASE
                                 WHEN COUNT(*) = 0 THEN 1
