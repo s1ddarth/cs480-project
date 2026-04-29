@@ -204,13 +204,13 @@ class HotelCLI:
         elif query == 8:
             self.show_top_k_clients()
         elif query == 9:
-            print("TODO")
+            self.hotel_rooms_and_bookings()
         elif query == 10:
-            print("TODO")
+            self.hotels_info()
         elif query == 11:
-            print("TODO")
+            self.client_to_hotels()
         elif query == 12:
-            print("TODO")
+            self.problematic_hotels()
         elif query == 13:
             print("TODO")
         else:
@@ -326,6 +326,92 @@ class HotelCLI:
                                  VALUES (%s, %s, %s);
                                  """, (newManagerName, newManagerEmail, newManagerSSN,))
         self.db.commit()
+
+
+    # List of Hotels and Info (4.1.11)
+    def list_hotels_and_info(self):
+        self.db.cur.execute("""
+            SELECT H.HotelID, H.Name, H.Address, COUNT(DISTINCT R.RoomNumber) AS NumRooms, COUNT(B.ClientEmail) AS NumBookings
+            FROM Hotel H LEFT JOIN Room R
+                ON H.HotelID = R.HotelID
+            LEFT JOIN Booking B
+                ON H.HotelID = B.HotelID
+            GROUP BY H.HotelID, H.Name, H.Address
+            ORDER BY H.HotelID;
+        """)
+        rows = self.db.cur.fetchall()
+
+        print("Hotel ID:        Hotel Name:        Address:        Rooms:        Bookings:")
+        for hotel_id, name, address, num_rooms, num_bookings in rows:
+            print(f"{hotel_id}        {name}        {address}        {num_rooms}        {num_bookings}")
+
+    # Clients to Hotels on cities (4.1.12)
+    def clients_to_hotels_on_cities(self):
+        first_city = input("Please enter client city: ")
+        second_city = input("Please enter hotel city: ")
+
+        self.db.cur.execute("""
+            SELECT DISTINCT C.Name, C.Email
+            FROM Client C
+            JOIN Address ClientAddress
+                ON C.Email = ClientAddress.ClientEmail
+            JOIN Booking B
+                ON C.Email = B.ClientEmail
+            JOIN Hotel H
+                ON B.HotelID = H.HotelID
+            JOIN Address HotelAddress
+                ON H.HotelID = HotelAddress.Hotel
+            WHERE ClientAddress.City = %s AND HotelAddress.City = %s
+            ORDER BY C.Name;
+        """, (first_city, second_city))
+        rows = self.db.cur.fetchall()
+
+        print("Client Name:        Email:")
+        for name, email in rows:
+            print(f"{name}        {email}")
+
+    # List of Hotels and Info (4.1.12)
+    def list_hotels_and_info(self):
+        self.db.cur.execute("""
+            SELECT H.Name, COUNT(DISTINCT B.BookingID) AS TotalBookings, AVG(R.Rating) AS AverageRating
+            FROM Hotel H
+            LEFT JOIN Booking B
+                ON H.HotelID = B.HotelID
+            LEFT JOIN Review R
+                ON H.HotelID = R.HotelID
+            GROUP BY H.HotelID, H.Name
+            ORDER BY H.Name;
+        """)
+        rows = self.db.cur.fetchall()
+
+        print("Hotel Name:        Total Bookings:        Average Rating:")
+        for hotel_name, total_bookings, average_rating in rows:
+            if average_rating is None:
+                average_rating_text = "No reviews"
+            else:
+                average_rating_text = f"{average_rating:.2f}"
+
+            print(f"{hotel_name}        {total_bookings}        {average_rating_text}")
+
+    # Problematic Chicago Hotels (4.1.13)
+    def problematic_chicago_hotels(self):
+        self.db.cur.execute("""
+            SELECT H.Name, COUNT(RV.ReviewID) AS NumBadReviews, AVG(RV.Rating) AS AverageRating
+            FROM Hotel H
+            JOIN Address A
+                ON H.HotelID = A.Hotel
+            JOIN Review RV
+                ON H.HotelID = RV.HotelID
+            WHERE A.City = 'Chicago'
+              AND RV.Rating <= 2
+            GROUP BY H.Name
+            ORDER BY NumBadReviews DESC, AverageRating ASC;
+        """)
+        rows = self.db.cur.fetchall()
+
+        print("Hotel Name:        Bad Reviews:        Average Rating:")
+        for hotel_name, bad_reviews, avg_rating in rows:
+            print(f"{hotel_name}        {bad_reviews}        {avg_rating:}")
 
     # Book specific room (4.2.4)
     def book_specific_room(self):
