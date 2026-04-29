@@ -62,14 +62,28 @@ class HotelCLI:
         self.current_client_email = None
 
     def run(self):
-        user_type = self.read_int("Are You A Manager (1) Or A Client (2)?: ")
 
-        if user_type == 1:
-            self.manager_flow()
-        elif user_type == 2:
-            self.client_menu()
-        else:
-            print("Unrecognized")
+        while True:
+            print("1 - Register as Manager")
+            print("2 - Register as Client")
+            print("3 - Sign in as Manager")
+            print("4 - Sign in as Client")
+
+            user_type = self.read_int("Enter your choice here: ")
+
+            if user_type == 1:
+                self.register_manager()
+            elif user_type == 2:
+                self.client_register()
+            elif user_type == 3:
+                self.manager_flow()
+            elif user_type == 4:
+                self.client_menu()
+            else:
+                print("Unrecognized")
+
+    def client_register():
+        print("TODO")
 
     def manager_flow(self):
         self.manager_login()
@@ -170,7 +184,6 @@ class HotelCLI:
         print("11 - Clients to Hotels on cities")
         print("12 - Problematic Chicago Hotels")
         print("13 - Clients list and amount spent")
-        print("14 - Register New Manager")
         print("-1 - Quit")
 
     def handle_manager_query(self, query):
@@ -200,8 +213,6 @@ class HotelCLI:
             print("TODO")
         elif query == 13:
             print("TODO")
-        elif query == 14:
-            self.register_manager()
         else:
             print("Unrecognized Request. Please Try Again.")
 
