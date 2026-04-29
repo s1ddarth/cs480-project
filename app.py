@@ -316,6 +316,61 @@ class HotelCLI:
                                  """, (newManagerName, newManagerEmail, newManagerSSN,))
         self.db.commit()
 
+    # Book specific room (4.2.4)
+    def book_specific_room(self):
+        hotel_name = input("Enter Hotel Name: ").strip()
+        room_number = self.read_int("Enter Room Number: ")
+        start_date = self.read_date("Enter Start Date (YYYY-MM-DD): ")
+        end_date = self.read_date("Enter End Date (YYYY-MM-DD): ")
+        price_per_day = self.read_int("Enter Price Per Day: ")
+
+        if start_date > end_date:
+            print("Start date must be on or before end date.")
+            return
+
+        hotel_id = self.db.get_hotel_id(hotel_name)
+        if hotel_id is None:
+            print("Hotel not found.")
+            return
+
+        self.db.cur.execute(
+            """
+            SELECT 1
+            FROM Room
+            WHERE HotelID = %s AND RoomNumber = %s;
+            """,
+            (hotel_id, room_number),
+        )
+        if self.db.cur.fetchone() is None:
+            print("Room not found at this hotel.")
+            return
+
+        self.db.cur.execute(
+            """
+            SELECT 1
+            FROM Booking
+            WHERE HotelID = %s
+              AND RoomNumber = %s
+              AND NOT (EndDate < %s OR StartDate > %s);
+            """,
+            (hotel_id, room_number, start_date, end_date),
+        )
+        if self.db.cur.fetchone():
+            print("Room is not available for this date range.")
+            return
+
+        booking_id = self.get_next_booking_id()
+        self.db.cur.execute(
+            """
+            INSERT INTO Booking (BookingID, ClientEmail, HotelID, RoomNumber, Price, StartDate, EndDate)
+            VALUES (%s, %s, %s, %s, %s, %s, %s);
+            """,
+            (booking_id, self.current_client_email, hotel_id, room_number, price_per_day, start_date, end_date),
+        )
+        self.db.commit()
+        print(f"Booking successful. BookingID: {booking_id}")
+
+    # Submit review only after prior stay (4.2.7)
     @staticmethod
     def read_int(prompt):
         while True:
