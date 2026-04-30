@@ -327,23 +327,29 @@ class HotelCLI:
                                  """, (newManagerName, newManagerEmail, newManagerSSN,))
         self.db.commit()
 
-
-    # List of Hotels and Info (4.1.11)
-    def list_hotels_and_info(self):
+    # List of all Hotel Rooms and Number of Bookings (4.1.11)
+    def list_hotel_rooms_and_bookings(self):
         self.db.cur.execute("""
-            SELECT H.HotelID, H.Name, H.Address, COUNT(DISTINCT R.RoomNumber) AS NumRooms, COUNT(B.ClientEmail) AS NumBookings
-            FROM Hotel H LEFT JOIN Room R
+            SELECT
+                H.Name,
+                R.RoomNumber,
+                COUNT(B.ClientEmail) AS NumBookings
+            FROM Hotel H
+            JOIN Room R
                 ON H.HotelID = R.HotelID
             LEFT JOIN Booking B
-                ON H.HotelID = B.HotelID
-            GROUP BY H.HotelID, H.Name, H.Address
-            ORDER BY H.HotelID;
+                ON R.HotelID = B.HotelID
+                AND R.RoomNumber = B.RoomNumber
+            GROUP BY H.HotelID, H.Name, R.RoomNumber
+            ORDER BY H.Name, R.RoomNumber;
         """)
+
         rows = self.db.cur.fetchall()
 
-        print("Hotel ID:        Hotel Name:        Address:        Rooms:        Bookings:")
-        for hotel_id, name, address, num_rooms, num_bookings in rows:
-            print(f"{hotel_id}        {name}        {address}        {num_rooms}        {num_bookings}")
+        print("Hotel Name:        Room Number:        Number of Bookings:")
+
+        for hotel_name, room_number, num_bookings in rows:
+            print(f"{hotel_name}        {room_number}        {num_bookings}")
 
     # Clients to Hotels on cities (4.1.12)
     def clients_to_hotels_on_cities(self):
@@ -370,7 +376,7 @@ class HotelCLI:
         for name, email in rows:
             print(f"{name}        {email}")
 
-    # List of Hotels and Info (4.1.12)
+    # List of Hotels and Info (4.1.13)
     def list_hotels_and_info(self):
         self.db.cur.execute("""
             SELECT H.Name, COUNT(DISTINCT B.BookingID) AS TotalBookings, AVG(R.Rating) AS AverageRating
@@ -393,7 +399,7 @@ class HotelCLI:
 
             print(f"{hotel_name}        {total_bookings}        {average_rating_text}")
 
-    # Problematic Chicago Hotels (4.1.13)
+    # Problematic Chicago Hotels (4.1.14)
     def problematic_chicago_hotels(self):
         self.db.cur.execute("""
             SELECT H.Name, COUNT(RV.ReviewID) AS NumBadReviews, AVG(RV.Rating) AS AverageRating
