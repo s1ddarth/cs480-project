@@ -5,6 +5,7 @@ from datetime import date
 
 def load_env_file(path=".env"):
     if not os.path.exists(path):
+        print('whoops')
         return
 
     with open(path, "r", encoding="utf-8") as env_file:
@@ -24,7 +25,7 @@ def load_env_file(path=".env"):
 
 class Database:
     def __init__(self):
-        load_env_file()
+        load_env_file('.env.example')
         self.conn = psycopg2.connect(
             dbname=os.getenv("DB_NAME", "CS480Project"),
             user=os.getenv("DB_USER", "username"),
@@ -62,28 +63,29 @@ class HotelCLI:
         self.current_client_email = None
 
     def run(self):
+        user_type = self.read_int("Are You A Manager (1) Or A Client (2)?: ")
 
-        while True:
-            print("1 - Register as Manager")
-            print("2 - Register as Client")
-            print("3 - Sign in as Manager")
-            print("4 - Sign in as Client")
+        if user_type == 1:
+            while True:
+                option = self.read_int("Enter 1 to register manager, enter 2 to login: ")
+                if option==1:
+                    self.register_manager()
+                    break
+                else:
+                    break
+            self.manager_flow()
+        elif user_type == 2:
+            while True:
+                option = self.read_int("Enter 1 if you are a new client, enter 2 to login: ")
+                if option==1:
+                    if self.register_user():
+                        break
+                else:
+                    break
 
-            user_type = self.read_int("Enter your choice here: ")
-
-            if user_type == 1:
-                self.register_manager()
-            elif user_type == 2:
-                self.client_register()
-            elif user_type == 3:
-                self.manager_flow()
-            elif user_type == 4:
-                self.client_menu()
-            else:
-                print("Unrecognized")
-
-    def client_register():
-        print("TODO")
+            self.client_menu()
+        else:
+            print("Unrecognized")
 
     def manager_flow(self):
         self.manager_login()
@@ -123,20 +125,27 @@ class HotelCLI:
 
     @staticmethod
     def print_client_menu():
-        print("1 - Book Specific Room")
-        print("2 - Submit Hotel Review")
-        print("3 - View My Bookings")
-        print("4 - Automatic Booking")
+        print("1 - Update information")
+        print("2 - View available rooms")
+        print("3 - Book Specific Room")
+        print("4 - Submit Hotel Review")
+        print("5 - View My Bookings")
+        print("6 - Automatic Booking")
         print("-1 - Quit")
 
     def handle_client_query(self, query):
-        if query == 1:
-            self.book_specific_room()
-        elif query == 2:
-            self.submit_review()
+        if query==1:
+            print('TODO')
+            self.update_client_info()
+        elif query==2:
+            print('TODO')
         elif query == 3:
-            self.view_my_bookings()
+            self.book_specific_room()
         elif query == 4:
+            self.submit_review()
+        elif query == 5:
+            self.view_my_bookings()
+        elif query == 6:
             self.automatic_booking()
         else:
             print("Unrecognized Request. Please Try Again.")
@@ -204,26 +213,26 @@ class HotelCLI:
         elif query == 8:
             self.show_top_k_clients()
         elif query == 9:
-            self.hotel_rooms_and_bookings()
+            print("TODO")
         elif query == 10:
-            self.hotels_info()
+            print("TODO")
         elif query == 11:
             self.client_to_hotels_on_cities()
         elif query == 12:
-            self.problematic_hotels()
-        elif query == 13:
             print("TODO")
+        elif query == 13:
+            # print("TODO")
+            self.client_amount()
         else:
             print("Unrecognized Request. Please Try Again.")
 
     # Insert Hotel (4.1.2)
     def insert_hotel(self):
-        newHotelID = self.read_int("Please Enter Hotel ID: ")
         newHotelName = input("Please Enter Hotel Name: ")
         newAddress = input("Please Enter New Hotel's Address: ")
 
-        self.db.cur.execute("""INSERT INTO Hotel (Name, HotelID, Address)
-                                VALUES (%s, %s);""", (newHotelName, newHotelID, newAddress,))
+        self.db.cur.execute("""INSERT INTO Hotel (Name, Address)
+                                VALUES (%s, %s);""", (newHotelName, newAddress,))
         self.db.commit()
 
     # Remove Hotel (4.1.3)
