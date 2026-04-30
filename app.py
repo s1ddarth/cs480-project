@@ -5,6 +5,7 @@ from datetime import date
 
 def load_env_file(path=".env"):
     if not os.path.exists(path):
+        print('whoops')
         return
 
     with open(path, "r", encoding="utf-8") as env_file:
@@ -24,7 +25,7 @@ def load_env_file(path=".env"):
 
 class Database:
     def __init__(self):
-        load_env_file()
+        load_env_file('.env.example')
         self.conn = psycopg2.connect(
             dbname=os.getenv("DB_NAME", "CS480Project"),
             user=os.getenv("DB_USER", "username"),
@@ -62,28 +63,22 @@ class HotelCLI:
         self.current_client_email = None
 
     def run(self):
+        user_type = self.read_int("Are You A Manager (1) Or A Client (2)?: ")
 
-        while True:
-            print("1 - Register as Manager")
-            print("2 - Register as Client")
-            print("3 - Sign in as Manager")
-            print("4 - Sign in as Client")
+        if user_type == 1:
+            self.manager_flow()
+        elif user_type == 2:
+            while True:
+                option = self.read_int("Enter 1 if you are a new client, enter 2 to login: ")
+                if option==1:
+                    if self.register_user():
+                        break
+                else:
+                    break
 
-            user_type = self.read_int("Enter your choice here: ")
-
-            if user_type == 1:
-                self.register_manager()
-            elif user_type == 2:
-                self.client_register()
-            elif user_type == 3:
-                self.manager_flow()
-            elif user_type == 4:
-                self.client_menu()
-            else:
-                print("Unrecognized")
-
-    def client_register():
-        print("TODO")
+            self.client_menu()
+        else:
+            print("Unrecognized")
 
     def manager_flow(self):
         self.manager_login()
@@ -123,20 +118,27 @@ class HotelCLI:
 
     @staticmethod
     def print_client_menu():
-        print("1 - Book Specific Room")
-        print("2 - Submit Hotel Review")
-        print("3 - View My Bookings")
-        print("4 - Automatic Booking")
+        print("1 - Update information")
+        print("2 - View available rooms")
+        print("3 - Book Specific Room")
+        print("4 - Submit Hotel Review")
+        print("5 - View My Bookings")
+        print("6 - Automatic Booking")
         print("-1 - Quit")
 
     def handle_client_query(self, query):
-        if query == 1:
-            self.book_specific_room()
-        elif query == 2:
-            self.submit_review()
+        if query==1:
+            print('TODO')
+            self.update_client_info()
+        elif query==2:
+            print('TODO')
         elif query == 3:
-            self.view_my_bookings()
+            self.book_specific_room()
         elif query == 4:
+            self.submit_review()
+        elif query == 5:
+            self.view_my_bookings()
+        elif query == 6:
             self.automatic_booking()
         else:
             print("Unrecognized Request. Please Try Again.")
@@ -184,6 +186,7 @@ class HotelCLI:
         print("11 - Clients to Hotels on cities")
         print("12 - Problematic Chicago Hotels")
         print("13 - Clients list and amount spent")
+        print("14 - Register New Manager")
         print("-1 - Quit")
 
     def handle_manager_query(self, query):
@@ -204,15 +207,18 @@ class HotelCLI:
         elif query == 8:
             self.show_top_k_clients()
         elif query == 9:
-            self.hotel_rooms_and_bookings()
-        elif query == 10:
-            self.hotels_info()
-        elif query == 11:
-            self.client_to_hotels()
-        elif query == 12:
-            self.problematic_hotels()
-        elif query == 13:
             print("TODO")
+        elif query == 10:
+            print("TODO")
+        elif query == 11:
+            print("TODO")
+        elif query == 12:
+            print("TODO")
+        elif query == 13:
+            # print("TODO")
+            self.client_amount()
+        elif query == 14:
+            self.register_manager()
         else:
             print("Unrecognized Request. Please Try Again.")
 
@@ -327,97 +333,146 @@ class HotelCLI:
                                  """, (newManagerName, newManagerEmail, newManagerSSN,))
         self.db.commit()
 
-    # List of all Hotel Rooms and Number of Bookings (4.1.11)
-    def list_hotel_rooms_and_bookings(self):
-        self.db.cur.execute("""
-            SELECT
-                H.Name,
-                R.RoomNumber,
-                COUNT(B.ClientEmail) AS NumBookings
-            FROM Hotel H
-            JOIN Room R
-                ON H.HotelID = R.HotelID
-            LEFT JOIN Booking B
-                ON R.HotelID = B.HotelID
-                AND R.RoomNumber = B.RoomNumber
-            GROUP BY H.HotelID, H.Name, R.RoomNumber
-            ORDER BY H.Name, R.RoomNumber;
-        """)
-
+    # 4.1.13 Total amount spent by every client
+    def client_amount(self):
+        self.db.cur.execute("""WITH emails as (SELECT 
+    Client.Email, 
+    SUM((Booking.EndDate - Booking.StartDate) * Booking.Price) AS TotalRevenue
+FROM 
+    Client 
+LEFT JOIN 
+    Booking ON Client.Email = Booking.ClientEmail
+GROUP BY 
+    Client.Email)
+        Select Client.Name, emails.TotalRevenue FROM emails LEFT JOIN Client on emails.email=CLient.Email;""")
         rows = self.db.cur.fetchall()
 
-        print("Hotel Name:        Room Number:        Number of Bookings:")
+        for row in rows:
+            print(f"Name: {row[0]}, Total Amount Spent: {row[1]}")
+        
+        return
+    
+    # Helper to get street and city from user
+    def get_address(self):
+        street = input("Enter your street: ").strip()
+        city = input("Enter your city: ").strip()
+        return (street, city)
 
-        for hotel_name, room_number, num_bookings in rows:
-            print(f"{hotel_name}        {room_number}        {num_bookings}")
+    # Helper to insert address and return the ID
+    def save_address(self, address_tuple):
+        # Unpack street and city
+        street, city = address_tuple
+        # INSERT and get the auto-generated ID back
+        query = "INSERT INTO Address (Street, City) VALUES (%s, %s) RETURNING Number;"
+        self.db.cur.execute(query, (street, city))
+        address_id = self.db.cur.fetchone()[0]
+        return address_id
 
-    # Clients to Hotels on cities (4.1.12)
-    def clients_to_hotels_on_cities(self):
-        first_city = input("Please enter client city: ")
-        second_city = input("Please enter hotel city: ")
+    # Register client (4.2.1)
+    def register_user(self):
+        name = input("Please enter your full name: ").strip()
+        email = input("Please enter your email: ").strip()
+        
+        # if '@' not in self.:
+        #     print('You did not enter a valid email')
+        #     return
+        
+        # Check for existing email using parameters
+        self.db.cur.execute("SELECT email FROM Client WHERE email = %s", (email,))
+        if self.db.cur.fetchone():
+            print("Email already exists, try another email")
+            return False
 
-        self.db.cur.execute("""
-            SELECT DISTINCT C.Name, C.Email
-            FROM Client C
-            JOIN Address ClientAddress
-                ON C.Email = ClientAddress.ClientEmail
-            JOIN Booking B
-                ON C.Email = B.ClientEmail
-            JOIN Hotel H
-                ON B.HotelID = H.HotelID
-            JOIN Address HotelAddress
-                ON H.HotelID = HotelAddress.Hotel
-            WHERE ClientAddress.City = %s AND HotelAddress.City = %s
-            ORDER BY C.Name;
-        """, (first_city, second_city))
-        rows = self.db.cur.fetchall()
+        # 1. Get and Save Client Address
+        print("Please enter your residential address")
+        res_address_data = self.get_address()
+        res_address_id = self.save_address(res_address_data)
 
-        print("Client Name:        Email:")
-        for name, email in rows:
-            print(f"{name}        {email}")
+        # 2. Insert Client
+        # Note: Using %s placeholders is safer and handles strings correctly
+        client_query = "INSERT INTO Client (Name, Email, AddressID) VALUES (%s, %s, %s);"
+        self.db.cur.execute(client_query, (name, email, res_address_id))
 
-    # List of Hotels and Info (4.1.13)
-    def list_hotels_and_info(self):
-        self.db.cur.execute("""
-            SELECT H.Name, COUNT(DISTINCT B.BookingID) AS TotalBookings, AVG(R.Rating) AS AverageRating
-            FROM Hotel H
-            LEFT JOIN Booking B
-                ON H.HotelID = B.HotelID
-            LEFT JOIN Review R
-                ON H.HotelID = R.HotelID
-            GROUP BY H.HotelID, H.Name
-            ORDER BY H.Name;
-        """)
-        rows = self.db.cur.fetchall()
+        # 3. Get and Save Credit Card Billing Address
+        print("Please enter your credit card information")
+        number = self.read_int("Please enter your credit card number: ") 
+        
+        print("Please enter your credit card billing address")
+        bill_address_data = self.get_address()
+        bill_address_id = self.save_address(bill_address_data)
 
-        print("Hotel Name:        Total Bookings:        Average Rating:")
-        for hotel_name, total_bookings, average_rating in rows:
-            if average_rating is None:
-                average_rating_text = "No reviews"
-            else:
-                average_rating_text = f"{average_rating:.2f}"
+        # 4. Insert Credit Card
+        card_query = "INSERT INTO CreditCard (CreditCardNumber, ClientEmail, BillingAddressID) VALUES (%s, %s, %s);"
+        self.db.cur.execute(card_query, (number, email, bill_address_id))
 
-            print(f"{hotel_name}        {total_bookings}        {average_rating_text}")
+        # 5. Commit all changes to the DB
+        self.db.commit()
+        print(f"Success! User {name} and card {number} registered.")
+        
+        return True
 
-    # Problematic Chicago Hotels (4.1.14)
-    def problematic_chicago_hotels(self):
-        self.db.cur.execute("""
-            SELECT H.Name, COUNT(RV.ReviewID) AS NumBadReviews, AVG(RV.Rating) AS AverageRating
-            FROM Hotel H
-            JOIN Address A
-                ON H.HotelID = A.Hotel
-            JOIN Review RV
-                ON H.HotelID = RV.HotelID
-            WHERE A.City = 'Chicago'
-              AND RV.Rating <= 2
-            GROUP BY H.Name
-            ORDER BY NumBadReviews DESC, AverageRating ASC;
-        """)
-        rows = self.db.cur.fetchall()
 
-        print("Hotel Name:        Bad Reviews:        Average Rating:")
-        for hotel_name, bad_reviews, avg_rating in rows:
-            print(f"{hotel_name}        {bad_reviews}        {avg_rating:}")
+    def update_client_info(self):
+        while True:
+            print("\n--- Update Profile ---")
+            print("1 - Update Name")
+            print("2 - Change Credit Card")
+            print("3 - Change Address")
+            print("-1 - Quit")
+            choice = self.read_int("Enter your choice: ")
+            
+            if choice == -1:
+                return
+            if choice in [1, 2, 3]:
+                break
+            print("Please enter a valid option")
+
+        if choice == 1:
+            # --- Update Name ---
+            new_name = input("Please enter your new name: ").strip()
+            query = "UPDATE Client SET Name = %s WHERE Email = %s;"
+            self.db.cur.execute(query, (new_name, self.current_client_email))
+            print("Name updated successfully.")
+
+        elif choice == 2:
+            # --- Change Credit Card ---
+            # 1. Get current card info to find the old address ID (to clean up later)
+            self.db.cur.execute("SELECT BillingAddressID FROM CreditCard WHERE ClientEmail = %s", (self.current_client_email,))
+            old_card_data = self.db.cur.fetchone()
+
+            # 2. Collect new info
+            print("Please enter your NEW credit card information")
+            number = input("Enter card number: ").strip()
+            print("Please enter your credit card billing address")
+            bill_address_data = self.get_address()
+            bill_address_id = self.save_address(bill_address_data)
+
+            # 3. Delete old card (this prevents unique constraint errors if you only allow one card)
+            self.db.cur.execute("DELETE FROM CreditCard WHERE ClientEmail = %s", (self.current_client_email,))
+
+            # 4. Insert New Card
+            card_query = "INSERT INTO CreditCard (CreditCardNumber, ClientEmail, BillingAddressID) VALUES (%s, %s, %s);"
+            self.db.cur.execute(card_query, (number, self.current_client_email, bill_address_id))
+            
+            # Optional: Delete old address from Address table if no one else is using it
+            if old_card_data:
+                self.db.cur.execute("DELETE FROM Address WHERE AddressID = %s", (old_card_data[0],))
+            
+            print("Credit card and billing address updated.")
+
+        elif choice == 3:
+            # --- Change Residential Address ---
+            print("Please enter your new residential address")
+            res_address_data = self.get_address()
+            res_address_id = self.save_address(res_address_data)
+
+            # Update the Client table to point to the NEW AddressID
+            query = "UPDATE Client SET AddressID = %s WHERE Email = %s;"
+            self.db.cur.execute(query, (res_address_id, self.current_client_email))
+            print("Residential address updated.")
+
+        self.db.commit()
+        return
 
     # Book specific room (4.2.4)
     def book_specific_room(self):
