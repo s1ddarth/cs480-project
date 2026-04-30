@@ -7,7 +7,7 @@ def load_env_file(path=".env"):
     if not os.path.exists(path):
         print('whoops')
         return
-
+    # print('Wohooo')
     with open(path, "r", encoding="utf-8") as env_file:
         for raw_line in env_file:
             line = raw_line.strip()
@@ -26,10 +26,12 @@ def load_env_file(path=".env"):
 class Database:
     def __init__(self):
         load_env_file('.env.example')
+        # print(os.getenv('DB_Password'))
+        # print(os.getenv("Password"))
         self.conn = psycopg2.connect(
             dbname=os.getenv("DB_NAME", "CS480Project"),
-            user=os.getenv("DB_USER", "username"),
-            password=os.getenv("DB_PASSWORD", "password"),
+            user=os.getenv("DB_USER", "postgres"),
+            password=os.getenv("PASSWORD", "postgres"),
             host=os.getenv("DB_HOST", "localhost"),
             port=os.getenv("DB_PORT", "5432"),
         )
@@ -66,6 +68,14 @@ class HotelCLI:
         user_type = self.read_int("Are You A Manager (1) Or A Client (2)?: ")
 
         if user_type == 1:
+            while True:
+                option = self.read_int("Enter 1 to register manager, enter 2 to login: ")
+                if option==1:
+                    self.register_manager()
+                    break
+                elif option==2:
+                    break
+                print("Please enter valid option")
             self.manager_flow()
         elif user_type == 2:
             while True:
@@ -73,8 +83,10 @@ class HotelCLI:
                 if option==1:
                     if self.register_user():
                         break
-                else:
+                elif option==2:
                     break
+                else:
+                    print("Invalid option")
 
             self.client_menu()
         else:
@@ -132,6 +144,7 @@ class HotelCLI:
             self.update_client_info()
         elif query==2:
             print('TODO')
+            self.get_all_rooms()
         elif query == 3:
             self.book_specific_room()
         elif query == 4:
@@ -186,7 +199,6 @@ class HotelCLI:
         print("11 - Clients to Hotels on cities")
         print("12 - Problematic Chicago Hotels")
         print("13 - Clients list and amount spent")
-        print("14 - Register New Manager")
         print("-1 - Quit")
 
     def handle_manager_query(self, query):
@@ -217,19 +229,16 @@ class HotelCLI:
         elif query == 13:
             # print("TODO")
             self.client_amount()
-        elif query == 14:
-            self.register_manager()
         else:
             print("Unrecognized Request. Please Try Again.")
 
     # Insert Hotel (4.1.2)
     def insert_hotel(self):
-        newHotelID = self.read_int("Please Enter Hotel ID: ")
         newHotelName = input("Please Enter Hotel Name: ")
         newAddress = input("Please Enter New Hotel's Address: ")
 
-        self.db.cur.execute("""INSERT INTO Hotel (Name, HotelID, Address)
-                                VALUES (%s, %s);""", (newHotelName, newHotelID, newAddress,))
+        self.db.cur.execute("""INSERT INTO Hotel (Name, Address)
+                                VALUES (%s, %s);""", (newHotelName, newAddress,))
         self.db.commit()
 
     # Remove Hotel (4.1.3)
@@ -300,11 +309,47 @@ class HotelCLI:
 
     # Remove Client (4.1.8)
     def remove_client(self):
-        # Deletes by client email
-        clientEmail = input("Please Enter Client Email To Remove: ")
-        self.db.cur.execute("""DELETE FROM Client
-                                WHERE Email = %s;""", (clientEmail,))
-        self.db.commit()
+        clientEmail = input("Please Enter Client Email To Remove: ").strip()
+
+        # 1. Collect all potential AddressIDs associated with this client
+        # We need the client's home address and all their credit card billing addresses
+        addr_query = """
+            SELECT AddressID FROM Client WHERE Email = %s
+            UNION
+            SELECT BillingAddressID FROM CreditCard WHERE ClientEmail = %s
+        """
+        self.db.cur.execute(addr_query, (clientEmail, clientEmail))
+        address_ids = [row[0] for row in self.db.cur.fetchall() if row[0] is not None]
+
+        try:
+            # 2. Delete from tables that reference ClientEmail (The "Children")
+            # Order matters if there are further dependencies
+            self.db.cur.execute("DELETE FROM Review WHERE ClientEmail = %s", (clientEmail,))
+            self.db.cur.execute("DELETE FROM Booking WHERE ClientEmail = %s", (clientEmail,))
+            self.db.cur.execute("DELETE FROM CreditCard WHERE ClientEmail = %s", (clientEmail,))
+
+            # 3. Delete the Client (The "Parent")
+            self.db.cur.execute("DELETE FROM Client WHERE Email = %s", (clientEmail,))
+
+            # 4. Clean up Addresses (Only if not used by Hotels or other Clients)
+            for addr_id in address_ids:
+                # This subquery checks if the address is still in use elsewhere
+                check_usage = """
+                    SELECT 
+                        (SELECT COUNT(*) FROM Hotel WHERE AddressID = %s) +
+                        (SELECT COUNT(*) FROM Client WHERE AddressID = %s) +
+                        (SELECT COUNT(*) FROM CreditCard WHERE BillingAddressID = %s)
+                """
+                self.db.cur.execute(check_usage, (addr_id, addr_id, addr_id))
+                if self.db.cur.fetchone()[0] == 0:
+                    self.db.cur.execute("DELETE FROM Address WHERE Number = %s", (addr_id,))
+
+            self.db.conn.commit()
+            print(f"Successfully removed client {clientEmail} and all associated unique data.")
+
+        except Exception as e:
+            self.db.conn.rollback()
+            print(f"Error during removal: {e}")
 
     # Show Top K Clients (4.1.9)
     def show_top_k_clients(self):
@@ -335,20 +380,13 @@ class HotelCLI:
 
     # 4.1.13 Total amount spent by every client
     def client_amount(self):
-        self.db.cur.execute("""WITH emails as (SELECT 
-    Client.Email, 
-    SUM((Booking.EndDate - Booking.StartDate) * Booking.Price) AS TotalRevenue
-FROM 
-    Client 
-LEFT JOIN 
-    Booking ON Client.Email = Booking.ClientEmail
-GROUP BY 
-    Client.Email)
-        Select Client.Name, emails.TotalRevenue FROM emails LEFT JOIN Client on emails.email=CLient.Email;""")
+        self.db.cur.execute("""WITH emails as (SELECT Client.Email, SUM((Booking.EndDate - Booking.StartDate) * Booking.Price) AS Rev FROM Client LEFT JOIN Booking ON Client.Email = Booking.ClientEmail
+GROUP BY Client.Email)
+        Select Client.Name, emails.Rev FROM emails LEFT JOIN Client on emails.email=CLient.Email;""")
         rows = self.db.cur.fetchall()
 
         for row in rows:
-            print(f"Name: {row[0]}, Total Amount Spent: {row[1]}")
+            print(f"Name: {row[0]} | Total Amount Spent: {row[1]}")
         
         return
     
@@ -373,9 +411,9 @@ GROUP BY
         name = input("Please enter your full name: ").strip()
         email = input("Please enter your email: ").strip()
         
-        # if '@' not in self.:
-        #     print('You did not enter a valid email')
-        #     return
+        if '@' not in email:
+            print('You did not enter a valid email')
+            return False
         
         # Check for existing email using parameters
         self.db.cur.execute("SELECT email FROM Client WHERE email = %s", (email,))
@@ -397,9 +435,12 @@ GROUP BY
         print("Please enter your credit card information")
         number = self.read_int("Please enter your credit card number: ") 
         
-        print("Please enter your credit card billing address")
-        bill_address_data = self.get_address()
-        bill_address_id = self.save_address(bill_address_data)
+        option = self.read_int("Please enter 1 to add new Billing address or 2 to use your address: ")
+        if option==1:
+            bill_address_data = self.get_address()
+            bill_address_id = self.save_address(bill_address_data)
+        elif option==2:
+            bill_address_id = res_address_id
 
         # 4. Insert Credit Card
         card_query = "INSERT INTO CreditCard (CreditCardNumber, ClientEmail, BillingAddressID) VALUES (%s, %s, %s);"
@@ -411,13 +452,31 @@ GROUP BY
         
         return True
 
+    def safe_delete_address(self, address_id):
+        """Deletes an address only if not linked to any Hotel, Client, or CreditCard."""
+        if not address_id:
+            return
+
+        # Check all three tables for references
+        check_query = """
+            SELECT 
+                (SELECT COUNT(*) FROM Hotel WHERE AddressID = %s) +
+                (SELECT COUNT(*) FROM Client WHERE AddressID = %s AND Email != %s) +
+                (SELECT COUNT(*) FROM CreditCard WHERE BillingAddressID = %s AND ClientEmail != %s)
+        """
+        self.db.cur.execute(check_query, (address_id, self.self.current_client_email, address_id, address_id, self.current_client_email))
+        count = self.db.cur.fetchone()[0]
+
+        if count == 0:
+            self.db.cur.execute("DELETE FROM Address WHERE AddressID = %s", (address_id,))
+            print(f"Old address (ID: {address_id}) was unused and has been removed.")
 
     def update_client_info(self):
         while True:
             print("\n--- Update Profile ---")
             print("1 - Update Name")
-            print("2 - Change Credit Card")
-            print("3 - Change Address")
+            print("2 - Add New Credit Card")
+            print("3 - Change Residential Address")
             print("-1 - Quit")
             choice = self.read_int("Enter your choice: ")
             
@@ -428,51 +487,82 @@ GROUP BY
             print("Please enter a valid option")
 
         if choice == 1:
-            # --- Update Name ---
             new_name = input("Please enter your new name: ").strip()
             query = "UPDATE Client SET Name = %s WHERE Email = %s;"
             self.db.cur.execute(query, (new_name, self.current_client_email))
             print("Name updated successfully.")
 
         elif choice == 2:
-            # --- Change Credit Card ---
-            # 1. Get current card info to find the old address ID (to clean up later)
-            self.db.cur.execute("SELECT BillingAddressID FROM CreditCard WHERE ClientEmail = %s", (self.current_client_email,))
-            old_card_data = self.db.cur.fetchone()
-
-            # 2. Collect new info
+            # --- Add a New Credit Card (Keeping old ones) ---
             print("Please enter your NEW credit card information")
-            number = input("Enter card number: ").strip()
-            print("Please enter your credit card billing address")
+            number = self.read_int("Enter card number: ")
+            print("Please enter the billing address for this card")
             bill_address_data = self.get_address()
             bill_address_id = self.save_address(bill_address_data)
 
-            # 3. Delete old card (this prevents unique constraint errors if you only allow one card)
-            self.db.cur.execute("DELETE FROM CreditCard WHERE ClientEmail = %s", (self.current_client_email,))
-
-            # 4. Insert New Card
+            # Insert New Card (No DELETE, we support multiple cards)
             card_query = "INSERT INTO CreditCard (CreditCardNumber, ClientEmail, BillingAddressID) VALUES (%s, %s, %s);"
             self.db.cur.execute(card_query, (number, self.current_client_email, bill_address_id))
-            
-            # Optional: Delete old address from Address table if no one else is using it
-            if old_card_data:
-                self.db.cur.execute("DELETE FROM Address WHERE AddressID = %s", (old_card_data[0],))
-            
-            print("Credit card and billing address updated.")
+            print("New credit card added successfully.")
 
         elif choice == 3:
             # --- Change Residential Address ---
+            # 1. Get the current AddressID so we can try to clean it up after the update
+            self.db.cur.execute("SELECT AddressID FROM Client WHERE Email = %s", (self.current_client_email,))
+            old_res_id = self.db.cur.fetchone()[0]
+
             print("Please enter your new residential address")
             res_address_data = self.get_address()
             res_address_id = self.save_address(res_address_data)
 
-            # Update the Client table to point to the NEW AddressID
+            # 2. Update Client to point to the new ID
             query = "UPDATE Client SET AddressID = %s WHERE Email = %s;"
             self.db.cur.execute(query, (res_address_id, self.current_client_email))
+            
+            # 3. Clean up old address if it's now a "ghost" record
+            self.safe_delete_address(old_res_id)
             print("Residential address updated.")
 
-        self.db.commit()
+        self.db.conn.commit()
         return
+    
+    # 4.2.3 get all available rooms
+    def get_all_rooms(self):
+        startDate = self.read_date("Please enter your checkin date (YYYY-MM-DD): ")
+        endDate = self.read_date("Please enter your checkout date (YYYY-MM-DD): ")
+
+        if endDate <= startDate:
+            print("Error: Checkout must be after Checkin.")
+            return
+
+        # Using a subquery to find all ROOMS that are NOT booked during those dates to get rooms which are not booked at all and the available ones
+        query = """
+            SELECT h.Name, r.RoomNumber
+            FROM Room r
+            JOIN Hotel h ON r.HotelID = h.HotelID
+            WHERE (r.HotelID, r.RoomNumber) NOT IN (
+                SELECT Booking.HotelID, Booking.RoomNumber 
+                FROM Booking 
+                WHERE Booking.StartDate < %s AND Booking.EndDate > %s
+            );
+        """
+        
+        
+        self.db.cur.execute(query, (endDate, startDate))
+        rows = self.db.cur.fetchall()
+
+        if not rows:
+            print("No rooms available for these dates.")
+        else:
+            print(f"\nAvailable rooms from {startDate} to {endDate}:")
+            for row in rows:
+                print(f"Hotel: {row[0]} | Room: {row[1]}")
+
+        return
+
+        
+
+        
 
     # Book specific room (4.2.4)
     def book_specific_room(self):
