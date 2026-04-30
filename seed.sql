@@ -51,13 +51,14 @@
 -- ON CONFLICT (ReviewID, HotelID) DO NOTHING;
 
 -- COMMIT;
-
+-- ROLLBACK
 
 -- DROP SCHEMA public CASCADE;
 -- CREATE SCHEMA public;
 -- GRANT ALL ON SCHEMA public TO postgres; -- Replace 'postgres' with your username (mine is postgres)
 -- GRANT ALL ON SCHEMA public TO public;
 
+-- SELECT * from Address
 
 BEGIN;
 
