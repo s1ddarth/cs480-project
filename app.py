@@ -66,6 +66,13 @@ class HotelCLI:
         user_type = self.read_int("Are You A Manager (1) Or A Client (2)?: ")
 
         if user_type == 1:
+            while True:
+                option = self.read_int("Enter 1 to register manager, enter 2 to login: ")
+                if option==1:
+                    self.register_manager()
+                    break
+                else:
+                    break
             self.manager_flow()
         elif user_type == 2:
             while True:
@@ -186,7 +193,6 @@ class HotelCLI:
         print("11 - Clients to Hotels on cities")
         print("12 - Problematic Chicago Hotels")
         print("13 - Clients list and amount spent")
-        print("14 - Register New Manager")
         print("-1 - Quit")
 
     def handle_manager_query(self, query):
@@ -217,19 +223,16 @@ class HotelCLI:
         elif query == 13:
             # print("TODO")
             self.client_amount()
-        elif query == 14:
-            self.register_manager()
         else:
             print("Unrecognized Request. Please Try Again.")
 
     # Insert Hotel (4.1.2)
     def insert_hotel(self):
-        newHotelID = self.read_int("Please Enter Hotel ID: ")
         newHotelName = input("Please Enter Hotel Name: ")
         newAddress = input("Please Enter New Hotel's Address: ")
 
-        self.db.cur.execute("""INSERT INTO Hotel (Name, HotelID, Address)
-                                VALUES (%s, %s);""", (newHotelName, newHotelID, newAddress,))
+        self.db.cur.execute("""INSERT INTO Hotel (Name, Address)
+                                VALUES (%s, %s);""", (newHotelName, newAddress,))
         self.db.commit()
 
     # Remove Hotel (4.1.3)
