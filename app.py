@@ -5,7 +5,7 @@ from datetime import date
 
 def load_env_file(path=".env"):
     if not os.path.exists(path):
-        print('whoops')
+        #print('whoops')
         return
 
     with open(path, "r", encoding="utf-8") as env_file:
