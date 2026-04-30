@@ -1,65 +1,3 @@
--- BEGIN;
-
--- -- Managers
--- INSERT INTO Managers (Name, SSN, Email) VALUES
--- ('Alice Manager', '111-11-1111', 'alice.manager@example.com'),
--- ('Bob Manager',   '222-22-2222', 'bob.manager@example.com')
--- ON CONFLICT (SSN) DO NOTHING;
-
--- -- Clients
--- INSERT INTO Client (Name, Email) VALUES
--- ('Carol Client', 'carol@example.com'),
--- ('Dan Client',   'dan@example.com')
--- ON CONFLICT (Email) DO NOTHING;
-
--- -- Hotels
--- INSERT INTO Hotel (Name, HotelID, Address) VALUES
--- ('Lakeside Hotel', 1, '100 Lake Shore Dr, Chicago, IL'),
--- ('City Inn',       2, '200 State St, Chicago, IL')
--- ON CONFLICT (HotelID) DO NOTHING;
-
--- -- Rooms (AccessMode must be 'lift' or 'stairs')
--- INSERT INTO Room (RoomNumber, HotelID, AccessMode, NumWindows, LastRenovatedYear) VALUES
--- (101, 'H100', 'lift',   2, 2020),
--- (102, 'H100', 'stairs', 1, 2018),
--- (201, 2, 'lift',   3, 2022)
--- ON CONFLICT (RoomNumber, HotelID) DO NOTHING;
-
--- -- Addresses (Address.Number is PK in your schema)
--- INSERT INTO Address (Street, City, Number, CreditCardNumber, ClientEmail, Hotel) VALUES
--- ('Main St',   'Chicago', 1001, 40000001, 'carol@example.com', NULL),
--- ('Oak Ave',   'Chicago', 1002, 40000002, 'dan@example.com',   NULL),
--- ('Pine Blvd', 'Evanston', 1003, NULL,    'carol@example.com', NULL)
--- ON CONFLICT (Number) DO NOTHING;
-
--- -- Credit cards (BillingAddressID must exist in Address.Number)
--- INSERT INTO CreditCard (CreditCardNumber, ClientEmail, BillingAddressID) VALUES
--- ('4111111111111111', 'carol@example.com', 1001),
--- ('4222222222222222', 'dan@example.com',   1002)
--- ON CONFLICT (CreditCardNumber) DO NOTHING;
-
--- -- Bookings
--- INSERT INTO Booking (BookingID, ClientEmail, HotelID, RoomNumber, Price, StartDate, EndDate) VALUES
--- (1, 'carol@example.com', 'H100', 101, 120, '2026-05-10', '2026-05-12'),
--- (2, 'dan@example.com',   2, 201, 150, '2026-05-15', '2026-05-18')
--- ON CONFLICT (BookingID) DO NOTHING;
-
--- -- Reviews
--- INSERT INTO Review (ReviewID, Message, Rating, ClientEmail, HotelID) VALUES
--- (1, 'Great stay', 9, 'carol@example.com', 'H100'),
--- (1, 'Good overall', 8, 'dan@example.com', 2)
--- ON CONFLICT (ReviewID, HotelID) DO NOTHING;
-
--- COMMIT;
--- ROLLBACK
-
--- DROP SCHEMA public CASCADE;
--- CREATE SCHEMA public;
--- GRANT ALL ON SCHEMA public TO postgres; -- Replace 'postgres' with your username (mine is postgres)
--- GRANT ALL ON SCHEMA public TO public;
-
--- SELECT * from Address
-
 BEGIN;
 
 -- 1. Addresses (Must come first so IDs exist)
@@ -81,42 +19,91 @@ ON CONFLICT (SSN) DO NOTHING;
 
 -- 3. Hotels (Now links to AddressID)
 -- Assuming Lakeside is Address 1, City Inn is Address 2
-INSERT INTO Hotel (HotelID, Name, AddressID) VALUES
-(1, 'Lakeside Hotel', 1),
-(2, 'City Inn', 2)
+INSERT INTO Hotel (Name, AddressID) VALUES
+(
+  'Lakeside Hotel',
+  (SELECT Number FROM Address WHERE Street = '100 Lake Shore Dr' AND City = 'Chicago')
+),
+(
+  'City Inn',
+  (SELECT Number FROM Address WHERE Street = '200 State St' AND City = 'Chicago')
+)
 ON CONFLICT (HotelID) DO NOTHING;
 
 -- 4. Clients (Now links to AddressID)
 -- Carol is Address 3, Dan is Address 4
 INSERT INTO Client (Name, Email, AddressID) VALUES
-('Carol Client', 'carol@example.com', 3),
-('Dan Client',   'dan@example.com',   4)
+('Carol Client', 'carol@example.com',
+	(SELECT Number FROM Address WHERE Street = '123 Main St' AND City = 'Naperville')
+),
+('Dan Client', 'dan@example.com',
+	(SELECT Number FROM Address WHERE Street = '456 Oak Ave' AND City = 'Chicago')
+)
 ON CONFLICT (Email) DO NOTHING;
 
 -- 5. Credit Cards (Links to ClientEmail and BillingAddressID)
 -- Carol's Bill is Address 5, Dan's Bill is Address 6
 INSERT INTO CreditCard (CreditCardNumber, ClientEmail, BillingAddressID) VALUES
-('4111111111111111', 'carol@example.com', 5),
-('4222222222222222', 'dan@example.com',   6)
+('4111111111111111', 'carol@example.com', 
+	(SELECT Number FROM Address WHERE Street = '789 Billing Way' AND City = 'Evanston')
+),
+('4222222222222222', 'dan@example.com', 
+	(SELECT Number FROM Address WHERE Street = '321 Credit Ln' AND City = 'Chicago')
+)
 ON CONFLICT (CreditCardNumber) DO NOTHING;
 
 -- 6. Rooms
 INSERT INTO Room (RoomNumber, HotelID, AccessMode, NumWindows, LastRenovatedYear) VALUES
-(101, 1, 'lift',   2, 2020),
-(102, 1, 'stairs', 1, 2018),
-(201, 'H200', 'lift',   3, 2022)
+(101, 
+	(SELECT HotelID FROM Hotel WHERE Name = 'Lakeside Hotel'), 
+	'lift',
+	2,
+	2020
+),
+(102,
+	(SELECT HotelID FROM Hotel WHERE Name = 'Lakeside Hotel'),
+	'stairs',
+	1,
+	2018
+),
+(201,
+	(SELECT HotelID FROM Hotel WHERE Name = 'City Inn'),
+	'lift',
+	3,
+	2022
+)
 ON CONFLICT (RoomNumber, HotelID) DO NOTHING;
 
 -- 7. Bookings
-INSERT INTO Booking (BookingID, ClientEmail, HotelID, RoomNumber, Price, StartDate, EndDate) VALUES
-(1, 'carol@example.com', 1, 101, 120, '2026-05-10', '2026-05-12'),
-(2, 'dan@example.com',   2, 201, 150, '2026-05-15', '2026-05-18')
+INSERT INTO Booking (ClientEmail, HotelID, RoomNumber, Price, StartDate, EndDate) VALUES
+('carol@example.com',
+	(SELECT HotelID FROM Hotel WHERE Name = 'Lakeside Hotel'),
+	101,
+	120,
+	'2026-05-10',
+	'2026-05-12'
+),
+('dan@example.com',
+	(SELECT HotelID FROM Hotel WHERE Name = 'City Inn'),
+	201,
+	150,
+	'2026-05-15',
+	'2026-05-18'
+)
 ON CONFLICT (BookingID) DO NOTHING;
 
 -- 8. Reviews
-INSERT INTO Review (ReviewID, Message, Rating, ClientEmail, HotelID) VALUES
-(1, 'Great stay', 9, 'carol@example.com', 1),
-(2, 'Good overall', 8, 'dan@example.com', 2)
+INSERT INTO Review (Message, Rating, ClientEmail, HotelID) VALUES
+('Great stay',
+	9,
+	'carol@example.com',
+	(SELECT HotelID FROM Hotel WHERE Name = 'Lakeside Hotel')
+),
+('Good overall',
+	8,
+	'dan@example.com',
+	(SELECT HotelID FROM Hotel WHERE Name = 'City Inn')
+)
 ON CONFLICT (ReviewID, HotelID) DO NOTHING;
 
 COMMIT;
