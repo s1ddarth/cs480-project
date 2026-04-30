@@ -208,7 +208,7 @@ class HotelCLI:
         elif query == 10:
             self.hotels_info()
         elif query == 11:
-            self.client_to_hotels()
+            self.client_to_hotels_on_cities()
         elif query == 12:
             self.problematic_hotels()
         elif query == 13:
@@ -328,7 +328,7 @@ class HotelCLI:
         self.db.commit()
 
     # List of all Hotel Rooms and Number of Bookings (4.1.11)
-    def list_hotel_rooms_and_bookings(self):
+    def hotel_rooms_and_bookings(self):
         self.db.cur.execute("""
             SELECT
                 H.Name,
@@ -346,38 +346,46 @@ class HotelCLI:
 
         rows = self.db.cur.fetchall()
 
-        print("Hotel Name:        Room Number:        Number of Bookings:")
+        print()
+        print(f"{'Hotel Name':<25} {'Room Number':<15} {'Number of Bookings':<20}")
+        #print("-" * 60)
 
-        for hotel_name, room_number, num_bookings in rows:
-            print(f"{hotel_name}        {room_number}        {num_bookings}")
+        for name, room, count in rows:
+            print(f"{name:<25} {room:<15} {count:<20}")
+        print()
 
     # Clients to Hotels on cities (4.1.12)
-    def clients_to_hotels_on_cities(self):
+    def client_to_hotels_on_cities(self):
         first_city = input("Please enter client city: ")
         second_city = input("Please enter hotel city: ")
 
         self.db.cur.execute("""
-            SELECT DISTINCT C.Name, C.Email
+                SELECT DISTINCT
+                C.Name,
+                C.Email
             FROM Client C
             JOIN Address ClientAddress
-                ON C.Email = ClientAddress.ClientEmail
+                ON C.AddressID = ClientAddress.Number
             JOIN Booking B
                 ON C.Email = B.ClientEmail
             JOIN Hotel H
                 ON B.HotelID = H.HotelID
             JOIN Address HotelAddress
-                ON H.HotelID = HotelAddress.Hotel
-            WHERE ClientAddress.City = %s AND HotelAddress.City = %s
-            ORDER BY C.Name;
+                ON H.AddressID = HotelAddress.Number
+            WHERE LOWER(ClientAddress.City) = LOWER(%s)
+            AND LOWER(HotelAddress.City) = LOWER(%s)
+            ORDER BY C.Name, C.Email;
         """, (first_city, second_city))
         rows = self.db.cur.fetchall()
 
-        print("Client Name:        Email:")
+        print()
+        print(f"{'Client Name':<25}        {'Email':<15}")
         for name, email in rows:
-            print(f"{name}        {email}")
+            print(f"{name:<25}        {email:<15}")
+        print()
 
     # List of Hotels and Info (4.1.13)
-    def list_hotels_and_info(self):
+    def hotels_info(self):
         self.db.cur.execute("""
             SELECT H.Name, COUNT(DISTINCT B.BookingID) AS TotalBookings, AVG(R.Rating) AS AverageRating
             FROM Hotel H
@@ -390,34 +398,48 @@ class HotelCLI:
         """)
         rows = self.db.cur.fetchall()
 
-        print("Hotel Name:        Total Bookings:        Average Rating:")
+        print()
+        print(f"{'Hotel Name':<25}      {'Total Bookings':<18}       {'Average Rating':<18}")
         for hotel_name, total_bookings, average_rating in rows:
             if average_rating is None:
                 average_rating_text = "No reviews"
             else:
                 average_rating_text = f"{average_rating:.2f}"
 
-            print(f"{hotel_name}        {total_bookings}        {average_rating_text}")
+            print(f"{hotel_name:<25}        {total_bookings:<18}        {average_rating_text:<18}")
+        print()
 
     # Problematic Chicago Hotels (4.1.14)
-    def problematic_chicago_hotels(self):
+    def problematic_hotels(self):
         self.db.cur.execute("""
-            SELECT H.Name, COUNT(RV.ReviewID) AS NumBadReviews, AVG(RV.Rating) AS AverageRating
+                SELECT
+                H.Name,
+                AVG(RV.Rating) AS AverageRating
             FROM Hotel H
-            JOIN Address A
-                ON H.HotelID = A.Hotel
+            JOIN Address HotelAddress
+                ON H.AddressID = HotelAddress.Number
             JOIN Review RV
                 ON H.HotelID = RV.HotelID
-            WHERE A.City = 'Chicago'
-              AND RV.Rating <= 2
-            GROUP BY H.Name
-            ORDER BY NumBadReviews DESC, AverageRating ASC;
+            JOIN Booking B
+                ON H.HotelID = B.HotelID
+            JOIN Client C
+                ON B.ClientEmail = C.Email
+            JOIN Address ClientAddress
+                ON C.AddressID = ClientAddress.Number
+            WHERE LOWER(HotelAddress.City) = LOWER('Chicago')
+            AND LOWER(ClientAddress.City) <> LOWER('Chicago')
+            GROUP BY H.HotelID, H.Name
+            HAVING AVG(RV.Rating) < 2
+            AND COUNT(DISTINCT B.ClientEmail) >= 2
+            ORDER BY H.Name;
         """)
         rows = self.db.cur.fetchall()
 
-        print("Hotel Name:        Bad Reviews:        Average Rating:")
-        for hotel_name, bad_reviews, avg_rating in rows:
-            print(f"{hotel_name}        {bad_reviews}        {avg_rating:}")
+        print()
+        print(f"{'Hotel Name':<25}      {'Average Rating':<18}")
+        for hotel_name, avg_rating in rows:
+            print(f"{hotel_name:<25}             {avg_rating:<18}")
+        print()
 
     # Book specific room (4.2.4)
     def book_specific_room(self):
