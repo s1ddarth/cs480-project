@@ -71,6 +71,11 @@ INSERT INTO Address (Street, City) VALUES
 ('456 Oak Ave', 'Chicago'),       -- ID 4 (Dan Res)
 ('789 Billing Way', 'Evanston'),  -- ID 5 (Carol Billing)
 ('321 Credit Ln', 'Chicago')      -- ID 6 (Dan Billing)
+('123 Main St', 'Naperville'),       -- ID 3 (Carol Res)
+('456 Oak Ave', 'Chicago'),       -- ID 4 (Dan Res)
+('789 Billing Way', 'Evanston'),  -- ID 5 (Carol Billing)
+('321 Credit Ln', 'Chicago'),      -- ID 6 (Dan Billing)
+('342 Elm St',  'Oak Forest')     -- ID 7 (Lexi Res)
 ON CONFLICT DO NOTHING;
 
 -- 2. Managers
@@ -91,7 +96,8 @@ ON CONFLICT (HotelID) DO NOTHING;
 -- Carol is Address 3, Dan is Address 4
 INSERT INTO Client (Name, Email, AddressID) VALUES
 ('Carol Client', 'carol@example.com', 3),
-('Dan Client',   'dan@example.com',   4)
+('Dan Client',   'dan@example.com',   4),
+('lexi Client',  'lexi@example.com',  7)
 ON CONFLICT (Email) DO NOTHING;
 
 -- 5. Credit Cards (Links to ClientEmail and BillingAddressID)
@@ -111,13 +117,15 @@ ON CONFLICT (RoomNumber, HotelID) DO NOTHING;
 -- 7. Bookings
 INSERT INTO Booking (ClientEmail, HotelID, RoomNumber, Price, StartDate, EndDate) VALUES
 ('carol@example.com', 1, 101, 120, '2026-05-10', '2026-05-12'),
-('dan@example.com',   2, 201, 150, '2026-05-15', '2026-05-18')
+('dan@example.com',   2, 201, 150, '2026-05-15', '2026-05-18'),
+('lexi@example.com',  1, 102, 134, '2026-05-20', '2026-05-23')
 ON CONFLICT (BookingID) DO NOTHING;
 
 -- 8. Reviews
 INSERT INTO Review (Message, Rating, ClientEmail, HotelID) VALUES
-( 'Great stay', 9, 'carol@example.com', 1),
-('Good overall', 8, 'dan@example.com', 2)
+( 'Great stay', 1, 'carol@example.com', 1),
+( 'Good overall', 8, 'dan@example.com', 2),
+( 'Bad service', 1, 'lexi@example.com', 1)
 ON CONFLICT (ReviewID, HotelID) DO NOTHING;
 
 COMMIT;
