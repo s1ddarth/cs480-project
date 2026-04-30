@@ -67,14 +67,10 @@ BEGIN;
 INSERT INTO Address (Street, City) VALUES
 ('100 Lake Shore Dr', 'Chicago'), -- ID 1
 ('200 State St', 'Chicago'),      -- ID 2
-('123 Main St', 'Chicago'),       -- ID 3 (Carol Res)
-('456 Oak Ave', 'Chicago'),       -- ID 4 (Dan Res)
-('789 Billing Way', 'Evanston'),  -- ID 5 (Carol Billing)
-('321 Credit Ln', 'Chicago')      -- ID 6 (Dan Billing)
 ('123 Main St', 'Naperville'),       -- ID 3 (Carol Res)
 ('456 Oak Ave', 'Chicago'),       -- ID 4 (Dan Res)
 ('789 Billing Way', 'Evanston'),  -- ID 5 (Carol Billing)
-('321 Credit Ln', 'Chicago'),      -- ID 6 (Dan Billing)
+('321 Credit Ln', 'Chicago')      -- ID 6 (Dan Billing)
 ('342 Elm St',  'Oak Forest')     -- ID 7 (Lexi Res)
 ON CONFLICT DO NOTHING;
 
