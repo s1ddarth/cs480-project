@@ -72,7 +72,7 @@ class HotelCLI:
                 option = self.read_int("Enter 1 to register manager, enter 2 to login: ")
                 if option==1:
                     self.register_manager()
-                    break
+                    continue
                 elif option==2:
                     break
                 print("Please enter valid option")
@@ -140,10 +140,8 @@ class HotelCLI:
 
     def handle_client_query(self, query):
         if query==1:
-            print('TODO')
             self.update_client_info()
         elif query==2:
-            print('TODO')
             self.get_all_rooms()
         elif query == 3:
             self.book_specific_room()
@@ -227,7 +225,6 @@ class HotelCLI:
         elif query == 12:
             self.client_to_hotels_on_cities()
         elif query == 13:
-            # print("TODO")
             self.client_amount()
         else:
             print("Unrecognized Request. Please Try Again.")
@@ -235,53 +232,126 @@ class HotelCLI:
     # Insert Hotel (4.1.2)
     def insert_hotel(self):
         newHotelName = input("Please Enter Hotel Name: ")
-        newAddress = input("Please Enter New Hotel's Address: ")
+        newAddress = input("Please Enter New Hotel's Street Address: ")
+        newAddressCity = input("Please Enter New Hotel's City: ")
 
-        self.db.cur.execute("""INSERT INTO Hotel (Name, Address)
-                                VALUES (%s, %s);""", (newHotelName, newAddress,))
+        # Insert Address First
+        self.db.cur.execute("""INSERT INTO Address (Street, City)
+                                VALUES (%s, %s)""", (newAddress, newAddressCity))
+
+        # Get Address ID
+        self.db.cur.execute("""SELECT Number FROM Address
+                                WHERE Street = %s AND City = %s""", (newAddress, newAddressCity,))
+        addressID = self.db.cur.fetchone()
+
+        # Insert Hotel and tie address to it
+        self.db.cur.execute("""INSERT INTO Hotel (Name, AddressID)
+                                VALUES (%s, %s);""", (newHotelName, addressID,))
         self.db.commit()
 
     # Remove Hotel (4.1.3)
     def remove_hotel(self):
+
         deleteHotelID = self.read_int("Please Enter Hotel ID: ")
+
+        # Get associated Address ID
+        self.db.cur.execute("""SELECT AddressID FROM Hotel
+                                WHERE HotelID = %s;""", (deleteHotelID,))
+        row = self.db.cur.fetchone()
+        addressID = row[0] if row else None
+
+        if addressID == None:
+            print("No such ID Exists")
+            return
+
+        # Delete Hotel Rooms
+        self.db.cur.execute("""DELETE FROM Room
+                                WHERE HotelID = %s;""", (deleteHotelID,))
+
+        # Delete Hotel
         self.db.cur.execute("""DELETE FROM Hotel
                                 WHERE HotelID = %s;""", (deleteHotelID,))
+        
+        # Delete Hotel Address
+        self.db.cur.execute("""DELETE FROM Address
+                                WHERE Number = %s;""", (addressID,))
+
         self.db.commit()
 
     # Update Hotel (4.1.4)
     def update_hotel(self):
         hotelID = self.read_int("Please Enter ID Of Hotel To Update: ")
-        newHotelName = input("Please Enter Hotel Name: ")
-        newAddress = input("Please Enter New Hotel's Address: ")
+        newHotelName = input("Please Enter New Hotel Name: ")
+        newAddress = input("Please Enter New Hotel's Street Address: ")
+        newAddressCity = input("Please Enter New Hotel's City: ")
 
+        # Get associated Address ID
+        self.db.cur.execute("""SELECT AddressID FROM Hotel
+                                WHERE HotelID = %s;""", (hotelID,))
+        row = self.db.cur.fetchone()
+        addressID = row[0] if row else None
+
+        if addressID == None:
+            print("No such ID Exists")
+            return
+
+        # Update old address
+        self.db.cur.execute("""UPDATE Address
+                                SET Street = %s, City = %s
+                                WHERE Number = %s;""", (newAddress, newAddressCity, addressID,))
+
+        # Update hotel info
         self.db.cur.execute("""UPDATE Hotel
-                                SET Name = %s, Address = %s
-                                WHERE HotelID = %s;""", (newHotelName, newAddress, hotelID,))
+                                SET Name = %s
+                                WHERE HotelID = %s;""", (newHotelName, hotelID,))
         self.db.commit()
 
     # Insert Room (4.1.5)
     def insert_room(self):
-        hotelID = self.read_int("Please Enter Hotel ID: ")
+        hotelName = input("Please Enter Hotel Name: ")
         roomNumber = self.read_int("Please Enter Room Number: ")
         accessMode = input("Please Enter Access Mode: ")
         numWindows = self.read_int("Please Enter Number Of Windows: ")
         lastRenovatedYear = self.read_int("Please Enter Last Year Of Renovation: ")
 
+        # Check for correct hotel ID
+        hotelID = self.db.get_hotel_id(hotelName)
+
+        # Return if hotel id does not exist
+        if hotelID == None:
+            print("Incorrect Or Missing Name From Hotel Table")
+            return
+        
+        # Insert New Room
         self.db. cur.execute("""INSERT INTO Room (RoomNumber, HotelID, AccessMode, NumWindows, LastRenovatedYear)
                                  VALUES (%s, %s, %s, %s, %s);
                                  """, (roomNumber, hotelID, accessMode, numWindows, lastRenovatedYear,))
+
         self.db.commit()
 
     # Remove Room (4.1.6)
     def remove_room(self):
         hotelName = input("Please Enter Hotel Name: ")
         roomNumber = self.read_int("Please Enter Room Number: ")
+
+        # Get associated hotel ID first
         hotelID = self.db.get_hotel_id(hotelName)
 
         if hotelID is None:
             print("Hotel not found.")
             return
 
+        # Check that room exists
+        self.db.cur.execute("""SELECT RoomNumber FROM Room
+                                WHERE HotelID = %s AND RoomNumber = %s;""", (hotelID, roomNumber,))
+        row = self.db.cur.fetchone()
+        roomExists = row[0] if row else None
+
+        if roomExists == None:
+            print("No such room exists")
+            return
+        
+        # Remove room
         self.db.cur.execute("""DELETE FROM Room
                                 WHERE RoomNumber = %s AND HotelID = %s;""", (roomNumber, hotelID,))
         self.db.commit()
@@ -290,9 +360,11 @@ class HotelCLI:
     def update_room(self):
         hotelName = input("Please Enter Hotel Name: ")
         roomNumber = self.read_int("Please Enter Room Number: ")
-        accessMode = input("Please Enter Access Mode: ")
-        numWindows = self.read_int("Please Enter Number Of Windows: ")
-        lastRenovatedYear = self.read_int("Please Enter Last Year Of Renovation: ")
+        newRoomNumber = self.read_int("Please Enter New Room Number: ")
+        accessMode = input("Please Enter New Access Mode: ")
+        numWindows = self.read_int("Please Enter New Number Of Windows: ")
+        lastRenovatedYear = self.read_int("Please Enter New Last Year Of Renovation: ")
+
         # Get associated hotel ID first
         hotelID = self.db.get_hotel_id(hotelName)
 
@@ -301,13 +373,21 @@ class HotelCLI:
             print("Hotel not found.")
             return
 
+        # Check that room exists
+        self.db.cur.execute("""SELECT RoomNumber FROM Room
+                                WHERE HotelID = %s AND RoomNumber = %s;""", (hotelID, roomNumber,))
+        row = self.db.cur.fetchone()
+        roomExists = row[0] if row else None
+
+        if roomExists == None:
+            print("No such room exists")
+            return
+
         # Then query with hotel ID
         self.db.cur.execute("""UPDATE Room
-                                SET AccessMode = %s, NumWindows = %s, LastRenovatedYear = %s
-                                WHERE RoomNumber = %s AND HotelID = %s;""", (accessMode, numWindows, lastRenovatedYear, roomNumber, hotelID,))
+                                SET RoomNumber = %s, AccessMode = %s, NumWindows = %s, LastRenovatedYear = %s
+                                WHERE RoomNumber = %s AND HotelID = %s;""", (newRoomNumber, accessMode, numWindows, lastRenovatedYear, roomNumber, hotelID,))
         self.db.commit()
-
-    
 
     # Remove Client (4.1.8)
     def remove_client(self):
@@ -674,10 +754,6 @@ GROUP BY Client.Email)
                 print(f"Hotel: {row[0]} | Room: {row[1]}")
 
         return
-
-        
-
-        
 
     # Book specific room (4.2.4)
     def book_specific_room(self):
