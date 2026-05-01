@@ -31,7 +31,7 @@ class Database:
         self.conn = psycopg2.connect(
             dbname=os.getenv("DB_NAME", "CS480Project"),
             user=os.getenv("DB_USER", "postgres"),
-            password=os.getenv("PASSWORD", "@Kuala2025"),
+            password=os.getenv("PASSWORD", "postgres"),
             host=os.getenv("DB_HOST", "localhost"),
             port=os.getenv("DB_PORT", "5432"),
         )
