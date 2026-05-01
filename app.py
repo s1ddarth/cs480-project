@@ -31,7 +31,7 @@ class Database:
         self.conn = psycopg2.connect(
             dbname=os.getenv("DB_NAME", "CS480Project"),
             user=os.getenv("DB_USER", "postgres"),
-            password=os.getenv("PASSWORD", "postgres"),
+            password=os.getenv("PASSWORD", "@Kuala2025"),
             host=os.getenv("DB_HOST", "localhost"),
             port=os.getenv("DB_PORT", "5432"),
         )
@@ -264,6 +264,10 @@ class HotelCLI:
             print("No such ID Exists")
             return
 
+        # Delete Bookings
+        self.db.cur.execute("""DELETE FROM Booking
+                                WHERE HotelID = %s;""", (deleteHotelID,))
+
         # Delete Hotel Rooms
         self.db.cur.execute("""DELETE FROM Room
                                 WHERE HotelID = %s;""", (deleteHotelID,))
@@ -350,6 +354,10 @@ class HotelCLI:
         if roomExists == None:
             print("No such room exists")
             return
+
+        # Delete Bookings
+        self.db.cur.execute("""DELETE FROM Booking
+                                WHERE RoomNumber = %s;""", (roomNumber,))
         
         # Remove room
         self.db.cur.execute("""DELETE FROM Room
@@ -387,6 +395,7 @@ class HotelCLI:
         self.db.cur.execute("""UPDATE Room
                                 SET RoomNumber = %s, AccessMode = %s, NumWindows = %s, LastRenovatedYear = %s
                                 WHERE RoomNumber = %s AND HotelID = %s;""", (newRoomNumber, accessMode, numWindows, lastRenovatedYear, roomNumber, hotelID,))
+
         self.db.commit()
 
     # Remove Client (4.1.8)
@@ -798,15 +807,24 @@ GROUP BY Client.Email)
             print("Room is not available for this date range.")
             return
 
-        booking_id = self.get_next_booking_id()
+        # booking_id = self.get_next_booking_id()
         self.db.cur.execute(
             """
-            INSERT INTO Booking (BookingID, ClientEmail, HotelID, RoomNumber, Price, StartDate, EndDate)
-            VALUES (%s, %s, %s, %s, %s, %s, %s);
+            INSERT INTO Booking (ClientEmail, HotelID, RoomNumber, Price, StartDate, EndDate)
+            VALUES (%s, %s, %s, %s, %s, %s);
             """,
-            (booking_id, self.current_client_email, hotel_id, room_number, price_per_day, start_date, end_date),
+            (self.current_client_email, hotel_id, room_number, price_per_day, start_date, end_date,)
         )
+
         self.db.commit()
+
+        self.db.cur.execute(""" SELECT BookingID FROM Booking
+                                 WHERE ClientEmail = %s AND HotelID = %s AND RoomNumber = %s AND Price = %s AND StartDate = %s AND EndDate = %s;""",
+                                 (self.current_client_email, hotel_id, room_number, price_per_day, start_date, end_date,)
+        )
+        row = self.db.cur.fetchone()
+        booking_id = row[0]
+        
         print(f"Booking successful. BookingID: {booking_id}")
 
     # Submit review check (4.2.7)
