@@ -31,7 +31,7 @@ class Database:
         self.conn = psycopg2.connect(
             dbname=os.getenv("DB_NAME", "CS480Project"),
             user=os.getenv("DB_USER", "postgres"),
-            password=os.getenv("PASSWORD", "postgres"),
+            password=os.getenv("PASSWORD", "@Kuala2025"),
             host=os.getenv("DB_HOST", "localhost"),
             port=os.getenv("DB_PORT", "5432"),
         )
@@ -223,7 +223,7 @@ class HotelCLI:
         elif query == 11:
             self.client_to_hotels_on_cities()
         elif query == 12:
-            self.client_to_hotels_on_cities()
+            self.problematic_hotels()
         elif query == 13:
             self.client_amount()
         else:
@@ -860,11 +860,13 @@ GROUP BY Client.Email)
         review_id = self.get_next_review_id(hotel_id)
         self.db.cur.execute(
             """
-            INSERT INTO Review (ReviewID, Message, Rating, ClientEmail, HotelID)
-            VALUES (%s, %s, %s, %s, %s);
+            INSERT INTO Review (Message, Rating, ClientEmail, HotelID)
+            VALUES (%s, %s, %s, %s)
+            RETURNING ReviewID;
             """,
-            (review_id, message, rating, self.current_client_email, hotel_id),
+            (message, rating, self.current_client_email, hotel_id),
         )
+        review_id = self.db.cur.fetchone()[0]
         self.db.commit()
         print(f"Review {review_id} submitted.")
 
@@ -933,10 +935,10 @@ GROUP BY Client.Email)
             booking_id = self.get_next_booking_id()
             self.db.cur.execute(
                 """
-                INSERT INTO Booking (BookingID, ClientEmail, HotelID, RoomNumber, Price, StartDate, EndDate)
-                VALUES (%s, %s, %s, %s, %s, %s, %s);
+                INSERT INTO Booking (ClientEmail, HotelID, RoomNumber, Price, StartDate, EndDate)
+                VALUES (%s, %s, %s, %s, %s, %s);
                 """,
-                (booking_id, self.current_client_email, hotel_id, room_number, price_per_day, start_date, end_date),
+                (self.current_client_email, hotel_id, room_number, price_per_day, start_date, end_date),
             )
             self.db.commit()
             print(
